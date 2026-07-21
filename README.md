@@ -23,7 +23,7 @@ state and the tooling to certify it, before adding the (noisy) purification gadg
 | Step | Item | State |
 |------|------|-------|
 | 1 | Noisy input state `ρ_ε` — genuine preparation circuit + verification | **done** |
-| 2 | Purification (SWAP-test) gadget | planned |
+| 2 | Purification (SWAP-test) gadget — ideal, verified on `ρ_ε` | **done** |
 | 3 | Noise on the gadget operations; operational threshold | planned |
 
 ## The noisy input state
@@ -47,12 +47,43 @@ Key closed forms (all checked by the verification code):
 - purity `Tr(ρ_ε²) = (1 − 3ε/4)² + 3(ε/4)²`
 - `ρ_ε` is entangled iff `F > 1/2`, i.e. `ε < 2/3`
 
+## The purification gadget (Step 2)
+
+The PQEC primitive is the **SWAP-test gadget**: two identical noisy copies
+`ρ ⊗ ρ` enter, an ancilla-controlled SWAP (for the 2-qubit register, two parallel
+Fredkin gates) is applied, and reading the ancilla extracts the purified component
+
+```
+P(ρ) = ρ² / Tr[ρ²]        (concentrates weight on the dominant eigenvector)
+```
+
+![PQEC SWAP-test gadget](circuit_pqec_gadget.png)
+
+The gadget is implemented as a genuine 5-wire circuit with two equivalent
+read-outs (both used when the gadget is made noisy in Step 3):
+
+- **state extraction** (Eq. 9): `ρ² = (ancilla |0⟩ block) − (|1⟩ block)`, so
+  `purify_once(ρ)` returns `ρ²/Tr[ρ²]`;
+- **observable / parity correlator** (the paper's actual protocol):
+  `⟨O⟩_purified = ⟨Z⊗O⟩ / ⟨Z⊗I⟩ = Tr(Oρ²)/Tr(ρ²)`.
+
+Both are verified to machine precision (`~1e-16`) on 500 random states and on `ρ_ε`.
+
+On the isotropic input `ρ_ε`, `|Φ⁺⟩` is the strictly dominant eigenvector for
+**every `ε < 1`** (eigenvalues `1−3ε/4` vs `ε/4`), so the ideal gadget restores
+fidelity and entanglement to 1 for all `ε < 1` — it even **re-entangles a
+separable input** (`2/3 ≤ ε < 1`); only `ρ = I/4` at `ε = 1` is a fixed point.
+
+![recovery over rounds](pqec_gadget_recovery.png)
+
 ## Files
 
 | File | Description |
 |------|-------------|
 | [`noisy_bell_state.py`](noisy_bell_state.py) | Prepares `ρ_ε` with a genuine circuit and `verify(eps)` — checks the analytic match, unit trace, Hermiticity, positive-semidefiniteness, the Bell spectrum, fidelity and purity |
 | [`draw_noisy_bell.py`](draw_noisy_bell.py) | Draws the preparation circuit (`circuit_noisy_bell.png`) |
+| [`pqec_gadget.py`](pqec_gadget.py) | Ideal SWAP-test gadget: `purify_once` / `purify_rounds` / `obs_purified`, verification, and the `ρ_ε` recovery demo |
+| [`draw_pqec_gadget.py`](draw_pqec_gadget.py) | Draws the 5-wire gadget (`circuit_pqec_gadget.png`) |
 | [`requirements.txt`](requirements.txt) | Dependencies (pinned minimums + tested versions) |
 
 ## Setup & run
@@ -63,7 +94,9 @@ source .venv/bin/activate          # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 
 python noisy_bell_state.py         # build ρ_ε and verify it (sweep + 500 random ε)
-python draw_noisy_bell.py          # regenerate the circuit diagram
+python draw_noisy_bell.py          # regenerate the input circuit diagram
+python pqec_gadget.py              # ideal gadget: verify + ρ_ε recovery demo
+python draw_pqec_gadget.py         # regenerate the gadget circuit diagram
 ```
 
 ### Verification output (excerpt)
