@@ -1,0 +1,12 @@
+# Python dependencies for the PQEC operational-threshold project.
+#
+# Install with:  pip install -r requirements.txt
+#
+# Minimum versions are what the code requires; the exact versions the code was
+# developed and verified against are noted in the trailing comments.
+
+pennylane>=0.45      # verified with 0.45.1  (mixed-state simulator, QubitChannel)
+numpy>=2.0           # verified with 2.4.6
+matplotlib>=3.8      # verified with 3.11.1  (circuit drawing only)
+
+# Tested on Python 3.11.
