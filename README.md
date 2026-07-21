@@ -24,7 +24,8 @@ state and the tooling to certify it, before adding the (noisy) purification gadg
 |------|------|-------|
 | 1 | Noisy input state `ρ_ε` — genuine preparation circuit + verification | **done** |
 | 2 | Purification (SWAP-test) gadget — ideal, verified on `ρ_ε` | **done** |
-| 3 | Noise on the gadget operations; operational threshold | planned |
+| 3a | Fredkin **global** depolarizing — analytic benchmark (no threshold) | **done** |
+| 3b | Fredkin **local** depolarizing — operational threshold | planned |
 
 ## The noisy input state
 
@@ -76,6 +77,30 @@ separable input** (`2/3 ≤ ε < 1`); only `ρ = I/4` at `ε = 1` is a fixed poi
 
 ![recovery over rounds](pqec_gadget_recovery.png)
 
+## Noise on the gadget (Step 3a): Fredkin global depolarizing
+
+First noisy-gadget model — right after each Fredkin, a **3-qubit global
+depolarizing channel** of strength `g_F` on the three qubits it touched (ancilla
+included): `G(σ) = (1−g_F)σ + g_F (I₈/8)⊗Tr_S(σ)`.
+
+**Result: this model self-mitigates — signal loss, no threshold.** Both parity
+correlators scale by `(1−g_F)²`, which cancels in the ratio, so the purified
+fidelity is *independent* of `g_F` for `0 ≤ g_F < 1`:
+
+```
+F_PQEC(p, g_F) = (1+3α²)² / (4(1+3α⁴)) = F_ideal-PQEC(p),   α = 1−4p/3  (α² = 1−ε).
+```
+
+The only cost is a sampling-overhead divergence `N_samp ∼ (1−g_F)^{-4}`. All the
+analytic formulas (numerator/denominator, `F_PQEC`, `F_bare`, `ΔF`, sampling) are
+verified against the circuit to `~1e-13`.
+
+![global-depol benchmark](global_depol_benchmark.png)
+
+A real operational threshold needs noise that attenuates numerator and denominator
+**asymmetrically** (e.g. independent *local* depolarizing on the Fredkin qubits) —
+that is Step 3b.
+
 ## Files
 
 | File | Description |
@@ -84,6 +109,9 @@ separable input** (`2/3 ≤ ε < 1`); only `ρ = I/4` at `ε = 1` is a fixed poi
 | [`draw_noisy_bell.py`](draw_noisy_bell.py) | Draws the preparation circuit (`circuit_noisy_bell.png`) |
 | [`pqec_gadget.py`](pqec_gadget.py) | Ideal SWAP-test gadget: `purify_once` / `purify_rounds` / `obs_purified`, verification, and the `ρ_ε` recovery demo |
 | [`draw_pqec_gadget.py`](draw_pqec_gadget.py) | Draws the 5-wire gadget (`circuit_pqec_gadget.png`) |
+| [`pqec_gadget_noise.py`](pqec_gadget_noise.py) | Fredkin **global** depolarizing `g_F`: noisy gadget, `obs_pqec_noisy`, effective state |
+| [`verify_analytic_global_depol.py`](verify_analytic_global_depol.py) | Verifies the analytic global-depol formulas against the circuit (`~1e-13`) |
+| [`plot_global_depol_benchmark.py`](plot_global_depol_benchmark.py) | `F_PQEC` flatness + sampling divergence figure (`global_depol_benchmark.png`) |
 | [`requirements.txt`](requirements.txt) | Dependencies (pinned minimums + tested versions) |
 
 ## Setup & run
@@ -97,6 +125,9 @@ python noisy_bell_state.py         # build ρ_ε and verify it (sweep + 500 rand
 python draw_noisy_bell.py          # regenerate the input circuit diagram
 python pqec_gadget.py              # ideal gadget: verify + ρ_ε recovery demo
 python draw_pqec_gadget.py         # regenerate the gadget circuit diagram
+python pqec_gadget_noise.py        # Fredkin global depol: <O> vs g_F (self-mitigates)
+python verify_analytic_global_depol.py  # analytic formulas vs circuit (~1e-13)
+python plot_global_depol_benchmark.py   # F_PQEC flatness + sampling divergence figure
 ```
 
 ### Verification output (excerpt)

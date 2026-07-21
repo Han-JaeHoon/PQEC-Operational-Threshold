@@ -99,3 +99,70 @@ probed.
 
 - Step 3: add noise to the gadget operations (Fredkin/H depolarizing, ancilla
   readout) and locate the operational threshold on the gadget error rate.
+
+---
+
+## 2026-07-21 — Step 3 (v1): 3-qubit global depolarizing on the Fredkins
+
+First noisy-gadget model: right after each Fredkin `cSWAP(0;1,3)` and
+`cSWAP(0;2,4)`, apply a **3-qubit global depolarizing channel** of strength `g_F`
+to the three qubits it touched (ancilla included):
+
+```
+G_gF(σ) = (1 − g_F) σ + g_F · (I₈/8) ⊗ Tr_S(σ).
+```
+
+Ancilla H's and readout left ideal. Purified value read out with the parity
+correlator `⟨O⟩ = ⟨Z_a⊗O⟩/⟨Z_a⊗I⟩`.
+
+**Built.**
+
+- **`pqec_gadget_noise.py`** — 3-qubit global-depol Kraus (`64` three-qubit
+  Paulis), the noisy gadget circuit (`_gadget_obs_noisy`, `_gadget_state_noisy`),
+  `obs_pqec_noisy(eps, g_F)`, the parity-weighted `effective_state_noisy`, and
+  `no_qec`.
+- **`verify_analytic_global_depol.py`** — checks the analytic derivation below
+  against the circuit.
+- **`plot_global_depol_benchmark.py`** — `global_depol_benchmark.png`.
+
+**Key result — this model self-mitigates: signal loss, no threshold.**
+Both correlators scale by exactly `(1−g_F)²` and the factor cancels in the ratio, so
+the purified fidelity is **independent of `g_F`** for `0 ≤ g_F < 1`:
+
+```
+F_PQEC(p, g_F) = (1+3α²)² / (4(1+3α⁴)) = F_ideal-PQEC(p),   α = 1−4p/3  (α² = 1−ε).
+```
+
+The mechanism (Heisenberg picture): the measured observables `X_a⊗Φ_A`, `X_a⊗I_A`
+are traceless on each noisy 3-qubit subsystem (because `Tr X_a = 0`, and back-
+propagating through the second Fredkin keeps the ancilla part off-diagonal), so the
+global-depol adjoint just multiplies each by `s = 1−g_F`. The error branch fully
+randomizes the ancilla and carries no parity signal.
+
+**Verified against the analytic derivation** (`verify_analytic_global_depol.py`),
+all to `~1e-13` or better:
+
+| Analytic | circuit error |
+|----------|---------------|
+| `A = (1−g_F)²(1+3α²)²/16` (numerator) | `2e-15` |
+| `B = (1−g_F)²(1+3α⁴)/4` (denominator) | `1e-15` |
+| `F_PQEC = (1+3α²)²/(4(1+3α⁴))`, `g_F`-independent | `1e-13` |
+| `F_bare = 1−3ε/4 = 1−2p+4p²/3` | `7e-16` |
+| `ΔF = 3α²(1−α²)(1+3α²)/(4(1+3α⁴)) > 0` for `0<p<3/4` | `6e-16` |
+| sampling overhead `(B₀/B_g)² = (1−g_F)^{-4}` | exact (`1.52/4.16/16/10⁴`) |
+
+Both parametrizations (global `ε`, local `p` with `α²=1−ε`) verified.
+
+**Consequence.** No finite `g_F` fidelity threshold here; the only cost is a
+sampling-overhead divergence `N_samp ∼ (1−g_F)^{-4}` (figure
+`global_depol_benchmark.png`). This is a useful analytic **benchmark**, but the
+global channel models Fredkin noise too symmetrically (it removes the whole parity
+signal in the error branch, biasing nothing). A real operational threshold needs a
+model that attenuates numerator and denominator **asymmetrically**.
+
+### Next
+
+- Step 3 (v2): **independent local depolarizing** on the three Fredkin qubits
+  (the derivation's §18). There the ancilla attenuation cancels but the data Bell
+  correlator keeps an extra factor, giving `F_PQEC = ¼ + β²(F_ideal − ¼)` and a
+  **finite `g_F` threshold**. Implement + verify.
