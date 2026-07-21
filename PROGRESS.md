@@ -166,3 +166,88 @@ model that attenuates numerator and denominator **asymmetrically**.
   (the derivation's §18). There the ancilla attenuation cancels but the data Bell
   correlator keeps an extra factor, giving `F_PQEC = ¼ + β²(F_ideal − ¼)` and a
   **finite `g_F` threshold**. Implement + verify.
+
+---
+
+## 2026-07-21 — Step 3b: realistic gate noise on a DECOMPOSED controlled-SWAP
+
+Instead of an abstract 3-qubit channel, decompose each Fredkin into native 1- and
+2-qubit gates and put realistic depolarizing noise on **each native gate**.
+
+**Representative decompositions (literature).**
+
+- **Textbook:** `CSWAP(q;a,b) = CNOT(b→a) · Toffoli(q,a;b) · CNOT(b→a)`, and the
+  Toffoli as the standard Clifford+T circuit (Nielsen & Chuang, Fig. 4.9): 6 CNOT
+  + 2 H + 7 T/T†. So **one Fredkin = 8 CNOTs** + single-qubit gates.
+- **2-qubit-gate optimum:** 5 two-qubit gates (Smolin & DiVincenzo, PRA 53, 2855
+  (1996)).
+- **Recent connectivity-aware low-CNOT:** arXiv:2305.18128 (APL Quantum 1, 016105,
+  2024) — lowest CNOT counts under all-to-all / linear connectivity.
+
+We simulate the textbook Clifford+T version (all 2-qubit gates are CNOTs, so one
+`p2` applies uniformly).
+
+**Noise model.** After every CNOT, a 2-qubit depolarizing channel of strength
+`p2` (`(1−p2)ρ + p2 I₄/4` — this equals the analytic `ε₂`); after every 1-qubit
+gate (H, T, T†), a 1-qubit depolarizing `p1`; default `p1 = p2/10`. Read out with
+the parity correlator `⟨O⟩ = ⟨Z_a⊗O⟩/⟨Z_a⊗I⟩`.
+
+**Built.** `pqec_decomposed_noise.py` — noisy native gates, the Clifford+T Toffoli,
+the decomposed Fredkin (with an `orient` option, below), `obs_pqec_decomposed`,
+`threshold_p2`, scan + figure. `p1=p2=0` reproduces the ideal gadget to `6.7e-16`
+(the CNOT+Toffoli decomposition is exact).
+
+**Key result — a finite operational threshold appears.** Unlike the 3-qubit global
+depolarizing (Step 3a, no threshold), native-gate noise hits the data qubits
+asymmetrically, so it **biases** `⟨O⟩` and a finite `p2*` exists. With `p1=p2/10`,
+`⟨O⟩` at `ε=0.40` falls from `0.942` and crosses the no-QEC baseline `1−3ε/4=0.70`
+around `p2* ≈ 0.09`; `p2*` grows with input noise. `p2* ≈ 0.05–0.12` sits far above
+realistic hardware 2-qubit errors (`~10⁻³–10⁻²`), so one PQEC round comfortably
+tolerates realistic gate noise. (`ℓ=1`; multi-round would tighten it.)
+
+**Exact analytic result (verified to ~1e-14).** With `u=1−ε₁`, `v=1−ε₂`,
+`t=(1−4p/3)²`, `C=2u⁴v⁶+u⁶v⁵+3u⁶v⁶`, `D=1+(1+2u⁴)v⁴t²`:
+
+```
+B = (u⁹v¹⁰/4) D,   A = (u⁹v¹⁰/16)[D + t(1+t)C],   F_dec = A/B = ¼[1 + t(1+t)C/D].
+```
+
+`verify_analytic_decomposed.py` reproduces `A`, `B`, `F_dec`, the ideal limit and
+the slopes on the genuine circuit (worst `3.9e-14`).
+
+**Orientation matters (new finding).** The Toffoli target leg carries the H/T/T†
+single-qubit gates, so it absorbs most of the single-qubit noise. The same Fredkin
+unitary can put that target on either swapped qubit:
+
+| orientation | Toffoli target on | single-qubit slope `K₁` | `ε₁` threshold @ p=0.4 |
+|-------------|-------------------|-------------------------|------------------------|
+| `retain`    | retained register A | **5/2** (= 2.500) | 0.140 |
+| `discard`   | discarded register B | **2** (= 2.000) | 0.191 |
+
+- The **denominator `B` and the CNOT slope `K₂ = 17/8`** (and the `ε₂` threshold)
+  are **orientation-independent** — CNOT noise is symmetric across the swap.
+- The analytic formula above corresponds to `orient="retain"`.
+- **`orient="discard"` is the better layout**: putting the noisy target leg on the
+  register you throw away shields the kept register, giving the milder `K₁=2` and a
+  higher `ε₁` threshold. A protocol should choose this orientation.
+
+Small-noise advantage condition (retain): `(5/2)ε₁ + (17/8)ε₂ < 2p`; for discard
+the `ε₁` coefficient relaxes to `2`. Convention: analytic `ε₁ = 4p₁/3` vs the
+PennyLane 1-qubit `p₁` (asserted in the verifier); analytic `ε₂ = p₂`.
+
+Figure: `pqec_decomposed_threshold.png` — (a) `⟨O⟩` vs 1q noise (orientation-split,
+solid) vs 2q noise (coincident, dashed); (b) `p2*` vs input noise for both
+orientations.
+
+**Cross-check history.** An independent analytic derivation (GPT) first gave the
+`retain` formula; an early review flagged its numerator as an error, but the
+discrepancy was entirely the **orientation choice** — flipping the circuit
+reproduces that formula to `1e-15`. Both analyses are correct for their respective
+(different) layouts.
+
+### Next
+
+- entanglement (concurrence/negativity) threshold from the effective state, and
+  multi-round accumulation of gate noise;
+- coherent / biased-CNOT Fredkin error (Cruz–Murta) and the 7-CNOT optimized
+  decomposition.

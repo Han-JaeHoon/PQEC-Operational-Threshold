@@ -25,7 +25,7 @@ state and the tooling to certify it, before adding the (noisy) purification gadg
 | 1 | Noisy input state `ρ_ε` — genuine preparation circuit + verification | **done** |
 | 2 | Purification (SWAP-test) gadget — ideal, verified on `ρ_ε` | **done** |
 | 3a | Fredkin **global** depolarizing — analytic benchmark (no threshold) | **done** |
-| 3b | Fredkin **local** depolarizing — operational threshold | planned |
+| 3b | **Decomposed** Fredkin (native gates) + realistic noise — operational threshold | **done** |
 
 ## The noisy input state
 
@@ -98,8 +98,44 @@ verified against the circuit to `~1e-13`.
 ![global-depol benchmark](global_depol_benchmark.png)
 
 A real operational threshold needs noise that attenuates numerator and denominator
-**asymmetrically** (e.g. independent *local* depolarizing on the Fredkin qubits) —
-that is Step 3b.
+**asymmetrically** (e.g. per-native-gate noise on a decomposed Fredkin) — that is
+Step 3b.
+
+## Realistic gate noise on a decomposed Fredkin (Step 3b)
+
+Decompose each Fredkin into native 1- and 2-qubit gates and put realistic
+depolarizing noise on **each native gate**. Representative decompositions:
+
+- **textbook** `CSWAP(q;a,b) = CNOT(b→a)·Toffoli(q,a;b)·CNOT(b→a)`, Toffoli = the
+  Clifford+T circuit (Nielsen & Chuang): 6 CNOT + T/H, so **1 Fredkin = 8 CNOTs**;
+- **optimum** 5 two-qubit gates (Smolin & DiVincenzo, PRA 53, 2855 (1996));
+- **recent** connectivity-aware low-CNOT counts (arXiv:2305.18128).
+
+Noise: 2-qubit depolarizing `p2` after each CNOT, 1-qubit `p1` after each
+single-qubit gate (`p1 = p2/10`). Sanity: `p1=p2=0` reproduces the ideal gadget to
+`6.7e-16` (the decomposition is exact).
+
+**Result: a finite operational threshold `p2*` appears.** Native-gate noise hits
+the data qubits asymmetrically, so it does **not** cancel in the ratio —
+`⟨O⟩_PQEC` falls with `p2` and crosses the no-QEC baseline at `p2* ≈ 0.05–0.12`
+(growing with input noise). That is **far above realistic hardware 2-qubit errors**
+(`~10⁻³–10⁻²`), so one PQEC round comfortably tolerates realistic gate noise.
+
+**Exact analytic result** (verified on the circuit to `~1e-14`), with `u=1−ε₁`,
+`v=1−ε₂`, `t=(1−4p/3)²`, `C=2u⁴v⁶+u⁶v⁵+3u⁶v⁶`, `D=1+(1+2u⁴)v⁴t²`:
+
+```
+B = (u⁹v¹⁰/4)D,   A = (u⁹v¹⁰/16)[D + t(1+t)C],   F_dec = A/B = ¼[1 + t(1+t)C/D].
+```
+
+**Orientation matters.** The Toffoli target leg carries the H/T/T† gates, so it
+absorbs most single-qubit noise. Putting that target on the **discarded** register
+shields the kept register (single-qubit slope `K₁ = 2`); putting it on the
+**retained** register does not (`K₁ = 5/2`). The denominator `B`, the CNOT slope
+`K₂ = 17/8`, and the `ε₂` threshold are **orientation-independent**. So a protocol
+should orient each Fredkin with its Toffoli target on the register it discards.
+
+![decomposed-Fredkin threshold](pqec_decomposed_threshold.png)
 
 ## Files
 
@@ -112,6 +148,9 @@ that is Step 3b.
 | [`pqec_gadget_noise.py`](pqec_gadget_noise.py) | Fredkin **global** depolarizing `g_F`: noisy gadget, `obs_pqec_noisy`, effective state |
 | [`verify_analytic_global_depol.py`](verify_analytic_global_depol.py) | Verifies the analytic global-depol formulas against the circuit (`~1e-13`) |
 | [`plot_global_depol_benchmark.py`](plot_global_depol_benchmark.py) | `F_PQEC` flatness + sampling divergence figure (`global_depol_benchmark.png`) |
+| [`pqec_decomposed_noise.py`](pqec_decomposed_noise.py) | **Decomposed** Fredkin (CNOT+Toffoli) with per-native-gate depolarizing; finite threshold `p2*`, both orientations, scan + figure |
+| [`verify_analytic_decomposed.py`](verify_analytic_decomposed.py) | Verifies the analytic `A/B/F_dec` (retain orientation) against the circuit (`~1e-14`); shows `B`/`K₂` orientation-independent, `K₁` not |
+| [`draw_decomposed.py`](draw_decomposed.py) | Draws one decomposed Fredkin and the full decomposed gadget (`circuit_decomposed_*.png`) |
 | [`requirements.txt`](requirements.txt) | Dependencies (pinned minimums + tested versions) |
 
 ## Setup & run
@@ -128,6 +167,9 @@ python draw_pqec_gadget.py         # regenerate the gadget circuit diagram
 python pqec_gadget_noise.py        # Fredkin global depol: <O> vs g_F (self-mitigates)
 python verify_analytic_global_depol.py  # analytic formulas vs circuit (~1e-13)
 python plot_global_depol_benchmark.py   # F_PQEC flatness + sampling divergence figure
+python pqec_decomposed_noise.py    # decomposed Fredkin + gate noise: threshold p2* (both orientations)
+python verify_analytic_decomposed.py  # analytic A/B/F_dec vs circuit; orientation effect
+python draw_decomposed.py          # decomposed Fredkin + full gadget circuit diagrams
 ```
 
 ### Verification output (excerpt)
