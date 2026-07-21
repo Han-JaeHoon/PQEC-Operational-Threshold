@@ -12,10 +12,6 @@ venv/
 env/
 pqec_env/
 
-# Generated figures (reproducible from the draw scripts)
-*.png
-*.pdf
-
 # OS / editor
 .DS_Store
 .vscode/
