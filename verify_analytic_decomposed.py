@@ -14,11 +14,26 @@ Analytic result (with C = 2u^4v^6+u^6v^5+3u^6v^6,  D = 1+(1+2u^4)v^4 t^2):
   F_bare = (1+3t)/4,   ideal (u=v=1): (1+3t)^2/(4(1+3t^2))
   slopes  K1 = 5/2 (single-qubit), K2 = 17/8 (CNOT) at t->1.
 
-ORIENTATION.  This analytic result corresponds to the Toffoli TARGET on the
-RETAINED register ("retain"): the kept register absorbs the H/T single-qubit
-gates.  The other orientation ("discard", target on the discarded register)
-leaves the denominator B and the CNOT slope K2 unchanged but gives a *milder*
-single-qubit slope K1 = 2.  We verify both.
+ORIENTATION.  The result above corresponds to the Toffoli TARGET on the RETAINED
+register ("retain"): the kept register absorbs the H/T single-qubit gates.  The
+other orientation ("discard", target on the discarded register) shares the same
+denominator D but has a different numerator,
+    C_D(u,v) = u^6 v^5 + (1+u^2+2u^6+u^8) v^6,
+giving the milder single-qubit slope K1 = 2 (vs 5/2).  The t-dependent slopes are
+    K1_retain(t)  = 4 t(1+t)(3t^2+2)/(1+3t^2)^2      -> 5/2  at t=1,
+    K1_discard(t) =   t(1+t)(9t^2+7)/(1+3t^2)^2      -> 2    at t=1,
+    K2(t)         =   t(1+t)(33t^2+35)/(4(1+3t^2)^2) -> 17/8 at t=1  (both).
+We verify both orientations against the circuit.
+
+OUTER HADAMARDS.  This verifier uses IDEAL outer gadget Hadamards, so its raw
+(A,B) carry the common factor u^9 v^10.  The main circuit (pqec_decomposed_noise.py)
+also depolarizes the two outer ancilla H's, which multiplies both A and B by a
+further u^2 (common factor u^11 v^10) -- this cancels in F_dec, so thresholds are
+unchanged.
+
+INPUT t.  t = (1-4p/3)^2 for local depolarizing p per Bell qubit (used here), or
+equivalently t = 1-eps for a global Bell depolarizing input rho_eps -- the same
+isotropic family.
 
 CONVENTION.  The analytic e2 equals p2 of pqec_decomposed_noise.py (both 2-qubit
 global depol); the analytic e1 relates to that file's PennyLane 1-qubit p1 by
@@ -141,6 +156,30 @@ def Fbare(p):
     return (1 + 3 * t_of(p)) / 4
 
 
+# --- discard orientation: closed form C_D (denominator D is the same) --------
+def C_D_uv(u, v):
+    """v^6 coefficient P_D(u) = 1+u^2+2u^6+u^8 (P_D(1)=5, P_D'(1)=22); v^5 term u^6."""
+    return u**6 * v**5 + (1 + u**2 + 2 * u**6 + u**8) * v**6
+
+
+def Fdec_D_ana(p, e1, e2):
+    u, v, t = 1 - e1, 1 - e2, t_of(p)
+    return 0.25 * (1 + t * (1 + t) * C_D_uv(u, v) / D_uvt(u, v, t))
+
+
+# --- small-noise slopes  F_dec ~= F_ideal - K1 e1 - K2 e2 -------------------
+def K1_retain(t):
+    return 4 * t * (1 + t) * (3 * t**2 + 2) / (1 + 3 * t**2) ** 2      # ->5/2 at t=1
+
+
+def K1_discard(t):
+    return t * (1 + t) * (9 * t**2 + 7) / (1 + 3 * t**2) ** 2          # ->2 at t=1
+
+
+def K2_slope(t):
+    return t * (1 + t) * (33 * t**2 + 35) / (4 * (1 + 3 * t**2) ** 2)  # ->17/8 at t=1
+
+
 def _thr(p, which, orient):
     """Circuit threshold: solve F_dec(circuit) = F_bare for e1 (e2=0) or e2 (e1=0)."""
     fb = Fbare(p)
@@ -203,16 +242,31 @@ def main():
                 errBo = max(errBo, abs(bR - bD))
     print(f" (5) denominator B is orientation-independent  : max diff = {errBo:.2e}")
 
-    # (6) slopes: K1 orientation-DEPENDENT, K2 orientation-independent
-    print("\n (6) small-noise slopes at p->0  (K = -dF/de at e=0):")
-    p, h = 1e-4, 1e-6
-    for orient in ("retain", "discard"):
-        f0 = (lambda e1, e2: (lambda z: z[0] / z[1])(circuit_AB(p, e1, e2, orient)))
-        F0 = f0(0, 0)
-        K1 = -(f0(h, 0) - F0) / h
-        K2 = -(f0(0, h) - F0) / h
-        print(f"     {orient:>8}:  K1 = {K1:.4f}   K2 = {K2:.4f}")
-    print("     analytic (retain): K1 = 2.5000 (=5/2)   K2 = 2.1250 (=17/8)")
+    # (5b) discard-orientation closed form C_D(u,v) = u^6 v^5 + (1+u^2+2u^6+u^8) v^6
+    errFD = 0.0
+    for p in [0.0, 0.05, 0.15, 0.30, 0.5]:
+        for e1 in [0.0, 0.05, 0.15, 0.25]:
+            for e2 in [0.0, 0.05, 0.15]:
+                zO, zI = circuit_AB(p, e1, e2, "discard")
+                errFD = max(errFD, abs(zO / zI - Fdec_D_ana(p, e1, e2)))
+    print(f"(5b) discard closed form F_D (C_D, Sec.4) vs circuit : max err = {errFD:.2e}")
+
+    # (6) slopes: K1 orientation-DEPENDENT, K2 orientation-independent.
+    #     Verify the t-dependent formulas K1_retain/K1_discard/K2_slope on the circuit.
+    print("\n (6) small-noise slopes  K = -dF/de at e=0  (circuit vs analytic K(t)):")
+    h = 1e-6
+    print(f"     {'t':>5} {'K1 retain':>20} {'K1 discard':>20} {'K2':>18}")
+    for p in [0.0, 0.15, 0.30]:
+        t = t_of(p)
+        kr = -((circuit_AB(p, h, 0, "retain")[0] / circuit_AB(p, h, 0, "retain")[1])
+               - Fdec_ana(p, 0, 0)) / h
+        kd = -((circuit_AB(p, h, 0, "discard")[0] / circuit_AB(p, h, 0, "discard")[1])
+               - Fdec_D_ana(p, 0, 0)) / h
+        k2 = -((circuit_AB(p, 0, h, "retain")[0] / circuit_AB(p, 0, h, "retain")[1])
+               - Fdec_ana(p, 0, 0)) / h
+        print(f"     {t:>5.2f} {kr:>9.4f}/{K1_retain(t):<9.4f} "
+              f"{kd:>9.4f}/{K1_discard(t):<9.4f} {k2:>8.4f}/{K2_slope(t):<8.4f}")
+    print("     (circuit / analytic)  ->  K1_retain(1)=5/2, K1_discard(1)=2, K2(1)=17/8")
 
     # (7) orientation-dependent threshold table (circuit)
     print("\n (7) single-noise thresholds by orientation (circuit):")
@@ -223,11 +277,13 @@ def main():
               f"{_thr(p,'e1','discard'):>14.5f}   "
               f"{_thr(p,'e2','retain'):>13.5f}{_thr(p,'e2','discard'):>14.5f}")
 
-    worst = max(errA, errB, errF, errI)
+    worst = max(errA, errB, errF, errI, errFD)
     print("\n" + "=" * 78)
-    print(f"  ANALYTIC (retain orientation) MATCHES CIRCUIT: "
+    print(f"  ANALYTIC MATCHES CIRCUIT (both orientations): "
           f"{'YES' if worst < 1e-11 else 'CHECK'}  (worst {worst:.1e})")
-    print("  B and K2 are orientation-independent; K1 and the e1-threshold are not.")
+    print("  B and K2 orientation-independent; K1, C(u,v), e1-threshold are not.")
+    print("  (Verifier uses ideal outer gadget Hadamards; the main circuit's outer-H")
+    print("   noise multiplies A and B by a common u^2 that cancels in F_dec.)")
     print("=" * 78)
 
 

@@ -231,9 +231,33 @@ unitary can put that target on either swapped qubit:
   register you throw away shields the kept register, giving the milder `K₁=2` and a
   higher `ε₁` threshold. A protocol should choose this orientation.
 
-Small-noise advantage condition (retain): `(5/2)ε₁ + (17/8)ε₂ < 2p`; for discard
-the `ε₁` coefficient relaxes to `2`. Convention: analytic `ε₁ = 4p₁/3` vs the
-PennyLane 1-qubit `p₁` (asserted in the verifier); analytic `ε₂ = p₂`.
+**Both closed forms** (same `D`; verified to `~1e-14`):
+
+```
+C_retain (u,v) = 2u⁴v⁶ + u⁶v⁵ + 3u⁶v⁶            (P_R(u)=2u⁴+3u⁶,  P_R'(1)=26)
+C_discard(u,v) =  u⁶v⁵ + (1+u²+2u⁶+u⁸) v⁶         (P_D(u)=1+u²+2u⁶+u⁸, P_D'(1)=22)
+```
+
+t-dependent slopes `F_dec ≈ F_ideal − K₁ε₁ − K₂ε₂` (verified against the circuit):
+
+```
+K₁_retain(t)  = 4t(1+t)(3t²+2)/(1+3t²)²        → 5/2  at t=1
+K₁_discard(t) =  t(1+t)(9t²+7)/(1+3t²)²        → 2    at t=1
+K₂(t)         =  t(1+t)(33t²+35)/(4(1+3t²)²)   → 17/8 at t=1   (both orientations)
+```
+
+Small-noise advantage condition: `K₁ε₁ + K₂ε₂ < Δ₀ ≈ 2p`; e.g. retain
+`(5/2)ε₁+(17/8)ε₂ < 2p`, discard `2ε₁+(17/8)ε₂ < 2p`.
+
+**Consistency notes (conventions).**
+- `ε₂ = p₂`; `ε₁ = 4p₁/3` (analytic replacement-depolarizing vs PennyLane 1-qubit
+  `DepolarizingChannel(p₁)`, contraction `u=1−4p₁/3`). Asserted in the verifier.
+- Input `t`: `t = 1−ε` for the global Bell-depolarizing input `ρ_ε` (main study),
+  or `t = (1−4p/3)²` for local depolarizing `p` per Bell qubit (verifier) — same
+  isotropic family.
+- Outer ancilla Hadamards: the verifier keeps them **ideal**, so its raw `A,B`
+  carry `u⁹v¹⁰`; the main circuit also depolarizes the two outer H's, multiplying
+  both `A` and `B` by a common `u²` (so `u¹¹v¹⁰`) that cancels in `F_dec`. Verified.
 
 Figure: `pqec_decomposed_threshold.png` — (a) `⟨O⟩` vs 1q noise (orientation-split,
 solid) vs 2q noise (coincident, dashed); (b) `p2*` vs input noise for both
@@ -242,8 +266,8 @@ orientations.
 **Cross-check history.** An independent analytic derivation (GPT) first gave the
 `retain` formula; an early review flagged its numerator as an error, but the
 discrepancy was entirely the **orientation choice** — flipping the circuit
-reproduces that formula to `1e-15`. Both analyses are correct for their respective
-(different) layouts.
+reproduces that formula to `1e-15`, and the `discard` closed form `C_discard` was
+then confirmed the same way. Both analyses are correct for their respective layouts.
 
 ### Next
 

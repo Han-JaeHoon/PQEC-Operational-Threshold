@@ -122,16 +122,22 @@ the data qubits asymmetrically, so it does **not** cancel in the ratio —
 (`~10⁻³–10⁻²`), so one PQEC round comfortably tolerates realistic gate noise.
 
 **Exact analytic result** (verified on the circuit to `~1e-14`), with `u=1−ε₁`,
-`v=1−ε₂`, `t=(1−4p/3)²`, `C=2u⁴v⁶+u⁶v⁵+3u⁶v⁶`, `D=1+(1+2u⁴)v⁴t²`:
+`v=1−ε₂`, `D=1+(1+2u⁴)v⁴t²`, and `F_dec = ¼[1 + t(1+t)C/D]`:
 
 ```
-B = (u⁹v¹⁰/4)D,   A = (u⁹v¹⁰/16)[D + t(1+t)C],   F_dec = A/B = ¼[1 + t(1+t)C/D].
+B = (u⁹v¹⁰/4)D,   A = (u⁹v¹⁰/16)[D + t(1+t)C]
+C_retain (u,v) = 2u⁴v⁶ + u⁶v⁵ + 3u⁶v⁶       (K₁ → 5/2 at t=1)
+C_discard(u,v) =  u⁶v⁵ + (1+u²+2u⁶+u⁸)v⁶     (K₁ → 2   at t=1)
 ```
+
+Input `t = 1−ε` (global Bell-depolarizing input `ρ_ε`) or `(1−4p/3)²` (local
+depolarizing `p` per Bell qubit) — same isotropic family. Conventions: `ε₂ = p₂`,
+`ε₁ = 4p₁/3`.
 
 **Orientation matters.** The Toffoli target leg carries the H/T/T† gates, so it
 absorbs most single-qubit noise. Putting that target on the **discarded** register
-shields the kept register (single-qubit slope `K₁ = 2`); putting it on the
-**retained** register does not (`K₁ = 5/2`). The denominator `B`, the CNOT slope
+shields the kept register (`C_discard`, `K₁ = 2`); putting it on the **retained**
+register does not (`C_retain`, `K₁ = 5/2`). The denominator `B`, the CNOT slope
 `K₂ = 17/8`, and the `ε₂` threshold are **orientation-independent**. So a protocol
 should orient each Fredkin with its Toffoli target on the register it discards.
 
