@@ -169,7 +169,7 @@ entirely a single-qubit-noise effect. The purified fidelity is
 
 The three circuits ([`draw_cnot_noise.py`](draw_cnot_noise.py)):
 
-**1. The CSWAP (Fredkin) decomposition** — `CSWAP(0;1,2) = CNOT(1→2)·Toffoli(0,2;1)·CNOT(1→2)` (Clifford+T Toffoli; 8 CNOTs):
+**1. The CSWAP (Fredkin) decomposition** — `CSWAP(0;1,2) = CNOT(2→1)·Toffoli(0,1;2)·CNOT(2→1)` (Clifford+T Toffoli; 8 CNOTs):
 
 ![CSWAP decomposition](circuit_cswap_decomp.png)
 

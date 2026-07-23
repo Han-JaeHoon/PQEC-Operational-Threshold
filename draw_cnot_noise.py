@@ -85,7 +85,7 @@ def main():
     rho_AB = np.kron(make_noisy_bell(0.40), make_noisy_bell(0.40))
 
     _save(_cswap_decomp, (), "circuit_cswap_decomp.png",
-          "CSWAP decomposition  CSWAP(0;1,2) = CNOT(1->2) . Toffoli(0,2;1) . CNOT(1->2)\n"
+          "CSWAP decomposition  CSWAP(0;1,2) = CNOT(2->1) . Toffoli(0,1;2) . CNOT(2->1)\n"
           "(Clifford+T Toffoli; 8 CNOTs, single-qubit gates H/T/T†)")
 
     _save(_swaptest_decomp, (rho_AB,), "circuit_swaptest_decomp.png",
