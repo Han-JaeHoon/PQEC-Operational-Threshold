@@ -167,6 +167,15 @@ entirely a single-qubit-noise effect. The purified fidelity is
 |-----------|------|------|------|------|------|------|
 | `ε₂*`     | 0.033 | 0.061 | 0.085 | 0.103 | 0.117 | 0.126 |
 
+The threshold `ε₂*` is the root of `(1+t)(v⁵+5v⁶) = 3(1+3v⁴t²)` (`t = 1−ε`); it
+**grows with input noise** (a noisier input has more to gain, so it tolerates
+noisier CNOTs) and stays **well above realistic hardware CNOT error** (`~10⁻²`) for
+inputs beyond `ε ≈ 0.03`. Near `ε₂=0` the slope is `K₂ = t(1+t)(33t²+35)/(4(1+3t²)²)`
+(`→ 17/8` for a clean input). Computed and verified against the circuit
+(`~1e-14`) in [`pqec_cnot_threshold.py`](pqec_cnot_threshold.py):
+
+![CNOT-only threshold](pqec_cnot_threshold.png)
+
 The three circuits ([`draw_cnot_noise.py`](draw_cnot_noise.py)):
 
 **1. The CSWAP (Fredkin) decomposition** — `CSWAP(0;1,2) = CNOT(2→1)·Toffoli(0,1;2)·CNOT(2→1)` (Clifford+T Toffoli; 8 CNOTs):
@@ -201,6 +210,7 @@ register A, [3,4] = discarded register B):
 | [`verify_analytic_decomposed.py`](verify_analytic_decomposed.py) | Verifies the analytic `A/B/F_dec` (retain orientation) against the circuit (`~1e-14`); shows `B`/`K₂` orientation-independent, `K₁` not |
 | [`draw_decomposed.py`](draw_decomposed.py) | Draws one decomposed Fredkin and the full decomposed gadget (`circuit_decomposed_*.png`) |
 | [`draw_cnot_noise.py`](draw_cnot_noise.py) | Draws the CNOT-only diagrams: CSWAP decomposition, SWAP test, and SWAP test with 2-qubit depol after each CNOT (barrier-separated stages) |
+| [`pqec_cnot_threshold.py`](pqec_cnot_threshold.py) | CNOT-only threshold `ε₂*` (single-qubit gates ideal): closed form, circuit check, threshold table + figure |
 | [`requirements.txt`](requirements.txt) | Dependencies (pinned minimums + tested versions) |
 
 ## Setup & run
@@ -223,6 +233,7 @@ python pqec_decomposed_noise.py    # decomposed Fredkin + gate noise: threshold 
 python verify_analytic_decomposed.py  # analytic A/B/F_dec vs circuit; orientation effect
 python draw_decomposed.py          # decomposed Fredkin + full gadget circuit diagrams
 python draw_cnot_noise.py          # CNOT-only diagrams (CSWAP decomp, SWAP test, +CNOT noise)
+python pqec_cnot_threshold.py      # CNOT-only threshold eps2* (single-qubit gates ideal)
 ```
 
 ### Verification output (excerpt)

@@ -279,9 +279,19 @@ discrepancy was entirely the **orientation choice** — flipping the circuit
 reproduces that formula to `1e-15`, and the `discard` closed form `C_discard` was
 then confirmed the same way. Both analyses are correct for their respective layouts.
 
+**CNOT-only threshold (meeting direction).** Restricting to noisy CNOTs with ideal
+single-qubit gates (`ε₁=0`, `u=1`) makes the result orientation-independent
+(`C_retain(1,v)=C_discard(1,v)=v⁵+5v⁶`). `pqec_cnot_threshold.py` gives the closed
+form `F_dec = ¼[1+t(1+t)(v⁵+5v⁶)/(1+3v⁴t²)]`, the threshold root
+`(1+t)(v⁵+5v⁶)=3(1+3v⁴t²)`, and the table `ε₂* = 0.033/0.061/0.085/0.103/0.117/0.126`
+for input `ε = 0.10…0.60` (verified vs circuit ~1e-14). `ε₂*` grows with input noise
+and sits above realistic hardware CNOT error (`~10⁻²`) for `ε ≳ 0.03`; slope at
+`ε₂=0` is `K₂ → 17/8`. Three barrier-separated circuits in `draw_cnot_noise.py`;
+threshold figure `pqec_cnot_threshold.png`.
+
 ### Next
 
-- entanglement (concurrence/negativity) threshold from the effective state, and
-  multi-round accumulation of gate noise;
-- coherent / biased-CNOT Fredkin error (Cruz–Murta) and the 7-CNOT optimized
-  decomposition.
+- **optimized decomposition** (Cruz–Murta 7-CNOT; 5 two-qubit-gate Smolin–DiVincenzo)
+  under the same CNOT-only model, compared to the general 8-CNOT threshold;
+- entanglement (concurrence/negativity) threshold and multi-round accumulation;
+- coherent / biased-CNOT Fredkin error (Cruz–Murta).
