@@ -147,6 +147,43 @@ should orient each Fredkin with its Toffoli target on the register it discards.
 
 ![decomposed-Fredkin threshold](pqec_decomposed_threshold.png)
 
+### CNOT-only noise (single-qubit gates ideal)
+
+For the operational-threshold study we focus on the case where **only the CNOTs
+are noisy** (a two-qubit depolarizing `ε₂` after each CNOT) and the single-qubit
+gates are ideal (`ε₁ = 0`, `u = 1`). Then the two orientation-dependent numerators
+**coincide**,
+
+```
+C_retain(1,v) = C_discard(1,v) = v⁵ + 5v⁶ ,   v = 1−ε₂ ,
+```
+
+so the result is **orientation-independent** — the earlier orientation split was
+entirely a single-qubit-noise effect. The purified fidelity is
+`F_dec = ¼[1 + t(1+t)(v⁵+5v⁶)/(1+3v⁴t²)]`, and the CNOT-only threshold `ε₂*`
+(general 8-CNOT decomposition) is:
+
+| input `ε` | 0.10 | 0.20 | 0.30 | 0.40 | 0.50 | 0.60 |
+|-----------|------|------|------|------|------|------|
+| `ε₂*`     | 0.033 | 0.061 | 0.085 | 0.103 | 0.117 | 0.126 |
+
+The three circuits ([`draw_cnot_noise.py`](draw_cnot_noise.py)):
+
+**1. The CSWAP (Fredkin) decomposition** — `CSWAP(0;1,2) = CNOT(1→2)·Toffoli(0,2;1)·CNOT(1→2)` (Clifford+T Toffoli; 8 CNOTs):
+
+![CSWAP decomposition](circuit_cswap_decomp.png)
+
+**2. The full SWAP test using that decomposition** (ideal). Barriers separate
+`state prep | CSWAP₁ | CSWAP₂ | final H` (wires: 0 = ancilla, [1,2] = kept
+register A, [3,4] = discarded register B):
+
+![SWAP test, decomposed CSWAP](circuit_swaptest_decomp.png)
+
+**3. The same SWAP test with a two-qubit depolarizing channel after each CNOT**
+(single-qubit gates left ideal):
+
+![SWAP test, CNOT-only noise](circuit_swaptest_cnot_noise.png)
+
 ## Files
 
 | File | Description |
@@ -163,6 +200,7 @@ should orient each Fredkin with its Toffoli target on the register it discards.
 | [`pqec_decomposed_noise.py`](pqec_decomposed_noise.py) | **Decomposed** Fredkin (CNOT+Toffoli) with per-native-gate depolarizing; finite threshold `p2*`, both orientations, scan + figure |
 | [`verify_analytic_decomposed.py`](verify_analytic_decomposed.py) | Verifies the analytic `A/B/F_dec` (retain orientation) against the circuit (`~1e-14`); shows `B`/`K₂` orientation-independent, `K₁` not |
 | [`draw_decomposed.py`](draw_decomposed.py) | Draws one decomposed Fredkin and the full decomposed gadget (`circuit_decomposed_*.png`) |
+| [`draw_cnot_noise.py`](draw_cnot_noise.py) | Draws the CNOT-only diagrams: CSWAP decomposition, SWAP test, and SWAP test with 2-qubit depol after each CNOT (barrier-separated stages) |
 | [`requirements.txt`](requirements.txt) | Dependencies (pinned minimums + tested versions) |
 
 ## Setup & run
@@ -184,6 +222,7 @@ python plot_global_depol_benchmark.py   # F_PQEC flatness + sampling divergence 
 python pqec_decomposed_noise.py    # decomposed Fredkin + gate noise: threshold p2* (both orientations)
 python verify_analytic_decomposed.py  # analytic A/B/F_dec vs circuit; orientation effect
 python draw_decomposed.py          # decomposed Fredkin + full gadget circuit diagrams
+python draw_cnot_noise.py          # CNOT-only diagrams (CSWAP decomp, SWAP test, +CNOT noise)
 ```
 
 ### Verification output (excerpt)
