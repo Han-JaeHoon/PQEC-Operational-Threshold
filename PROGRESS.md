@@ -160,6 +160,16 @@ global channel models Fredkin noise too symmetrically (it removes the whole pari
 signal in the error branch, biasing nothing). A real operational threshold needs a
 model that attenuates numerator and denominator **asymmetrically**.
 
+**Step-by-step cross-check with the hand derivation.** A note (Han, July 22;
+ordering `(a,A1,A2,B1,B2)`) evolves the 5-qubit state through the round and gives a
+closed form after every gate: `σ₀=|+⟩⟨+|⊗R`, `σ₁=½[[R,RS₁],[S₁R,S₁RS₁]]`,
+`σ₁'=sσ₁+(1−s)I⊗⁵/32`, `σ₂=(s/2)[[R,RS_AB],[RS_AB,R]]+(1−s)I⊗⁵/32`,
+`σ₂'=(s²/2)[…]+(1−s²)I⊗⁵/32`, `σ_out=(s²/2)[[R+RS_AB,0],[0,R−RS_AB]]+(1−s²)I⊗⁵/32`
+(`s=1−g`). `verify_note_states.py` reproduces **every** intermediate state on the
+genuine circuit to `~1e-16` across several `(ε,g)` (incl. `g=0`, `g=0.9`); the note
+and the implementation agree at every step, and the circuit diagram is
+`circuit_gadget_noise.png` (`draw_gadget_noise.py`).
+
 ### Next
 
 - Step 3 (v2): **independent local depolarizing** on the three Fredkin qubits

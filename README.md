@@ -93,7 +93,11 @@ F_PQEC(p, g_F) = (1+3α²)² / (4(1+3α⁴)) = F_ideal-PQEC(p),   α = 1−4p/3 
 
 The only cost is a sampling-overhead divergence `N_samp ∼ (1−g_F)^{-4}`. All the
 analytic formulas (numerator/denominator, `F_PQEC`, `F_bare`, `ΔF`, sampling) are
-verified against the circuit to `~1e-13`.
+verified against the circuit to `~1e-13`. A hand derivation
+(ordering `(a,A1,A2,B1,B2)`, closed forms after every gate) is reproduced
+step-by-step by the circuit to `~1e-16` in `verify_note_states.py`.
+
+![Step 3a circuit](circuit_gadget_noise.png)
 
 ![global-depol benchmark](global_depol_benchmark.png)
 
@@ -152,7 +156,9 @@ should orient each Fredkin with its Toffoli target on the register it discards.
 | [`pqec_gadget.py`](pqec_gadget.py) | Ideal SWAP-test gadget: `purify_once` / `purify_rounds` / `obs_purified`, verification, and the `ρ_ε` recovery demo |
 | [`draw_pqec_gadget.py`](draw_pqec_gadget.py) | Draws the 5-wire gadget (`circuit_pqec_gadget.png`) |
 | [`pqec_gadget_noise.py`](pqec_gadget_noise.py) | Fredkin **global** depolarizing `g_F`: noisy gadget, `obs_pqec_noisy`, effective state |
+| [`draw_gadget_noise.py`](draw_gadget_noise.py) | Draws the Step 3a gadget (`circuit_gadget_noise.png`) |
 | [`verify_analytic_global_depol.py`](verify_analytic_global_depol.py) | Verifies the analytic global-depol formulas against the circuit (`~1e-13`) |
+| [`verify_note_states.py`](verify_note_states.py) | Reproduces the note's step-by-step states (`σ₀…σ_out`) on the circuit (`~1e-16`) |
 | [`plot_global_depol_benchmark.py`](plot_global_depol_benchmark.py) | `F_PQEC` flatness + sampling divergence figure (`global_depol_benchmark.png`) |
 | [`pqec_decomposed_noise.py`](pqec_decomposed_noise.py) | **Decomposed** Fredkin (CNOT+Toffoli) with per-native-gate depolarizing; finite threshold `p2*`, both orientations, scan + figure |
 | [`verify_analytic_decomposed.py`](verify_analytic_decomposed.py) | Verifies the analytic `A/B/F_dec` (retain orientation) against the circuit (`~1e-14`); shows `B`/`K₂` orientation-independent, `K₁` not |
@@ -171,7 +177,9 @@ python draw_noisy_bell.py          # regenerate the input circuit diagram
 python pqec_gadget.py              # ideal gadget: verify + ρ_ε recovery demo
 python draw_pqec_gadget.py         # regenerate the gadget circuit diagram
 python pqec_gadget_noise.py        # Fredkin global depol: <O> vs g_F (self-mitigates)
+python draw_gadget_noise.py        # Step 3a gadget circuit diagram
 python verify_analytic_global_depol.py  # analytic formulas vs circuit (~1e-13)
+python verify_note_states.py       # note's step-by-step states vs circuit (~1e-16)
 python plot_global_depol_benchmark.py   # F_PQEC flatness + sampling divergence figure
 python pqec_decomposed_noise.py    # decomposed Fredkin + gate noise: threshold p2* (both orientations)
 python verify_analytic_decomposed.py  # analytic A/B/F_dec vs circuit; orientation effect
