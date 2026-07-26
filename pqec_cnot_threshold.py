@@ -26,20 +26,71 @@ Run:  python pqec_cnot_threshold.py
 
 import numpy as np
 import matplotlib.pyplot as plt
+import pennylane as qml
 
-from verify_analytic_decomposed import circuit_AB   # genuine circuit (e1=0 => CNOT-only)
+from verify_analytic_decomposed import circuit_AB, _fred, _bell_local_p  # genuine circuit
 
 np.set_printoptions(precision=4, suppress=True)
 
+_X = np.array([[0, 1], [1, 0]], dtype=complex)
+_Z = np.array([[1, 0], [0, -1]], dtype=complex)
+_dev5 = qml.device("default.mixed", wires=5)
 
-# --- analytic (single-qubit ideal, u=1) ------------------------------------
+
+# --- analytic (single-qubit ideal, u=1;  s = 1-eps2) -----------------------
 def F_dec(eps2, t):
+    """Purified Bell fidelity  F = 1/4 [1 + t(1+t)(v^5+5v^6)/(1+3 v^4 t^2)],  v=1-eps2
+    (equivalently s^5(1+5s)... with s=v).  See CNOT_NOISE_ANALYSIS.md."""
     v = 1 - eps2
     return 0.25 * (1 + t * (1 + t) * (v**5 + 5 * v**6) / (1 + 3 * v**4 * t**2))
 
 
 def F_bare(t):
     return (1 + 3 * t) / 4
+
+
+# parity denominator, Bell-projector numerator, and the anisotropic effective-state
+# Bell-diagonal correlators (rho_eff = 1/4[II + c_perp(XX-YY) + c_z ZZ]).
+def Q_denom(t, eps2):
+    s = 1 - eps2
+    return s**10 / 4 * (1 + 3 * s**4 * t**2)
+
+
+def N_num(t, eps2):
+    s = 1 - eps2
+    return s**10 / 16 * (1 + 3 * s**4 * t**2 + s**5 * (1 + 5 * s) * t * (1 + t))
+
+
+def c_perp(t, eps2):
+    s = 1 - eps2
+    return 2 * s**6 * t * (1 + t) / (1 + 3 * s**4 * t**2)
+
+
+def c_z(t, eps2):
+    s = 1 - eps2
+    return s**5 * (1 + s) * t * (1 + t) / (1 + 3 * s**4 * t**2)
+
+
+def eff_correlators_circuit(t, eps2):
+    """Effective-state correlators (c_perp from XX, c_z from ZZ) from the genuine
+    CNOT-only circuit (single-qubit gates ideal, discard orientation)."""
+    p = _eps_to_local_p(1 - t)                       # t = 1-eps  ->  local p
+    rho = np.kron(_bell_local_p(p), _bell_local_p(p))
+
+    @qml.qnode(_dev5)
+    def run(O):
+        qml.QubitDensityMatrix(rho, wires=[1, 2, 3, 4])
+        qml.Hadamard(0)
+        _fred(0, 1, 3, 0.0, eps2)                     # Toffoli target on discarded B
+        _fred(0, 2, 4, 0.0, eps2)
+        qml.Hadamard(0)
+        return qml.expval(qml.PauliZ(0) @ O) if O is not None \
+            else qml.expval(qml.PauliZ(0))
+
+    B = float(run(None))
+    cx = float(run(qml.Hermitian(np.kron(_X, _X), wires=[1, 2]))) / B
+    cz = float(run(qml.Hermitian(np.kron(_Z, _Z), wires=[1, 2]))) / B
+    return cx, cz
 
 
 def eps2_star(t):
@@ -97,6 +148,18 @@ def main():
         slope = -(F_dec(h, t) - F_dec(0, t)) / h
         print(f"     eps={eps:.1f} (t={t:.1f}):  K2 = {slope:.4f}  "
               f"(=t(1+t)(33t^2+35)/(4(1+3t^2)^2))")
+
+    # (3) effective state is ANISOTROPIC Bell-diagonal under CNOT noise
+    print("\n (3) effective state rho_eff = 1/4[II + c_perp(XX-YY) + c_z ZZ]:")
+    print(f"     {'eps':>4}{'eps2':>6} | {'c_perp circ':>12}{'(ana)':>9} "
+          f"{'c_z circ':>10}{'(ana)':>9} {'c_z-c_perp':>11}")
+    for eps, e2 in [(0.4, 0.0), (0.4, 0.12), (0.4, 0.25)]:
+        t = 1 - eps
+        cx, cz = eff_correlators_circuit(t, e2)
+        print(f"     {eps:>4.1f}{e2:>6.2f} | {cx:>12.5f}{c_perp(t,e2):>9.5f} "
+              f"{cz:>10.5f}{c_z(t,e2):>9.5f} {cz-cx:>+11.5f}")
+    print("     -> q>0 breaks isotropy (c_z > c_perp): Z-correlation is better preserved;")
+    print("        q=0 gives c_z = c_perp (isotropic Bell-diagonal).")
 
     # ---- Figure -----------------------------------------------------------
     fig, axes = plt.subplots(1, 2, figsize=(11.5, 4.5))

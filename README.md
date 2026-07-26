@@ -149,6 +149,9 @@ should orient each Fredkin with its Toffoli target on the register it discards.
 
 ### CNOT-only noise (single-qubit gates ideal)
 
+> Full write-up with variable definitions and the theory/implementation split:
+> **[`CNOT_NOISE_ANALYSIS.md`](CNOT_NOISE_ANALYSIS.md)**.
+
 For the operational-threshold study we focus on the case where **only the CNOTs
 are noisy** (a two-qubit depolarizing `ε₂` after each CNOT) and the single-qubit
 gates are ideal (`ε₁ = 0`, `u = 1`). Then the two orientation-dependent numerators
@@ -210,7 +213,8 @@ register A, [3,4] = discarded register B):
 | [`verify_analytic_decomposed.py`](verify_analytic_decomposed.py) | Verifies the analytic `A/B/F_dec` (retain orientation) against the circuit (`~1e-14`); shows `B`/`K₂` orientation-independent, `K₁` not |
 | [`draw_decomposed.py`](draw_decomposed.py) | Draws one decomposed Fredkin and the full decomposed gadget (`circuit_decomposed_*.png`) |
 | [`draw_cnot_noise.py`](draw_cnot_noise.py) | Draws the CNOT-only diagrams: CSWAP decomposition, SWAP test, and SWAP test with 2-qubit depol after each CNOT (barrier-separated stages) |
-| [`pqec_cnot_threshold.py`](pqec_cnot_threshold.py) | CNOT-only threshold `ε₂*` (single-qubit gates ideal): closed form, circuit check, threshold table + figure |
+| [`pqec_cnot_threshold.py`](pqec_cnot_threshold.py) | CNOT-only threshold `ε₂*` (single-qubit gates ideal): closed forms (`F`, `Q`, `N_Φ`, `c_⊥`, `c_z`), circuit checks incl. effective-state anisotropy, threshold table + figure |
+| [`CNOT_NOISE_ANALYSIS.md`](CNOT_NOISE_ANALYSIS.md) | Full CNOT-only note: notation/variable definitions, theory (Part I), implementation & verification (Part II) |
 | [`requirements.txt`](requirements.txt) | Dependencies (pinned minimums + tested versions) |
 
 ## Setup & run
