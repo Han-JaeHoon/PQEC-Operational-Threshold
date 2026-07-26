@@ -289,6 +289,40 @@ and sits above realistic hardware CNOT error (`~10⁻²`) for `ε ≳ 0.03`; slo
 `ε₂=0` is `K₂ → 17/8`. Three barrier-separated circuits in `draw_cnot_noise.py`;
 threshold figure `pqec_cnot_threshold.png`.
 
+---
+
+## 2026-07-24 — Reducing the gadget CNOT count (two routes)
+
+Write-up: `SWAP_GADGET_OPTIMIZATION.md`. Goal: same role as `H·CSWAP·CSWAP·H`,
+fewer CNOTs. Two senses of "same role", both rigorously verified.
+
+**Part 1 — same unitary (`resynthesize_gadget.py`).** The coherent gadget is
+Clifford + 2 Toffoli. Qiskit (`opt2/3`) and pytket (`FullPeepholeOptimise`) both
+reduce **16 → 14 CNOTs**, each verified to implement the identical 5-qubit unitary
+(up to global phase). `14 = 2×7` is the per-Fredkin optimum; the shared ancilla
+control gives no further saving. (PyZX minimizes T-count → 27 CNOTs, wrong metric.)
+
+**Part 2 — same observable (`destructive_gadget.py`).** PQEC needs only
+`F = Tr(Oρ²)/Tr(ρ²)`, which the **destructive / virtual-distillation** measurement
+returns with no ancilla and no controlled-SWAP: a Bell-basis change
+`V = [H_{A1}CNOT_{A1→B1}][H_{A2}CNOT_{A2→B2}]` (**2 CNOTs**), then read the fixed
+ideal-frame observables `O_den = V SWAP_reg V†`, `O_num = V·½(O_A SWAP_reg +
+SWAP_reg O_A)·V†`; `F = ⟨O_num⟩/⟨O_den⟩`.
+
+- **Ideal equivalence verified to `2e-16`** — `F_dest` = controlled-SWAP gadget =
+  `Tr(Oρ²)/Tr(ρ²)`, for `O=|Φ⁺⟩⟨Φ⁺|` and generic `O=ZZ`.
+- **CNOT-noise threshold ~3–4× higher** than the 16-CNOT controlled-SWAP (2 noisy
+  CNOTs vs 16):
+
+  | input `ε` | 0.10 | 0.20 | 0.30 | 0.40 | 0.50 | 0.60 |
+  |-----------|------|------|------|------|------|------|
+  | dest `ε₂*` (2 CNOT) | 0.146 | 0.229 | 0.280 | 0.313 | 0.333 | 0.343 |
+  | cSWAP `ε₂*` (16 CNOT) | 0.033 | 0.061 | 0.085 | 0.103 | 0.117 | 0.126 |
+
+  Figure `destructive_gadget.png`.
+- **Caveat:** measurement-only (yields `⟨O⟩`, not a coherent purified state for
+  interleaving). Matches the paper's virtual-distillation framing.
+
 ### Next
 
 - **optimized decomposition** (Cruz–Murta 7-CNOT; 5 two-qubit-gate Smolin–DiVincenzo)

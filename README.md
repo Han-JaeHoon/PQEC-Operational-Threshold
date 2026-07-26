@@ -196,6 +196,22 @@ register A, [3,4] = discarded register B):
 
 ![SWAP test, CNOT-only noise](circuit_swaptest_cnot_noise.png)
 
+### Reducing the gadget's CNOT count
+
+Full write-up: **[`SWAP_GADGET_OPTIMIZATION.md`](SWAP_GADGET_OPTIMIZATION.md)**.
+
+- **Same unitary** ([`resynthesize_gadget.py`](resynthesize_gadget.py)): Qiskit and
+  pytket both peephole-reduce the coherent gadget **16 → 14 CNOTs**
+  (verified unitary-equivalent; `= 2×7`, the per-Fredkin optimum).
+- **Same observable** ([`destructive_gadget.py`](destructive_gadget.py)): since PQEC
+  needs only `⟨O⟩ = Tr(Oρ²)/Tr(ρ²)`, the **destructive / virtual-distillation**
+  measurement (Bell-basis change, no ancilla, no controlled-SWAP) reproduces `⟨O⟩`
+  to `2e-16` (fidelity projector **and** generic Pauli) using only **2 CNOTs** — and
+  its CNOT-noise threshold is **~3–4× higher** than the 16-CNOT controlled-SWAP
+  gadget. (Measurement-only: yields `⟨O⟩`, not a coherent purified state.)
+
+![destructive vs controlled-SWAP](destructive_gadget.png)
+
 ## Files
 
 | File | Description |
@@ -215,6 +231,9 @@ register A, [3,4] = discarded register B):
 | [`draw_cnot_noise.py`](draw_cnot_noise.py) | Draws the CNOT-only diagrams: CSWAP decomposition, SWAP test, and SWAP test with 2-qubit depol after each CNOT (barrier-separated stages) |
 | [`pqec_cnot_threshold.py`](pqec_cnot_threshold.py) | CNOT-only threshold `ε₂*` (single-qubit gates ideal): closed forms (`F`, `Q`, `N_Φ`, `c_⊥`, `c_z`), circuit checks incl. effective-state anisotropy, threshold table + figure |
 | [`CNOT_NOISE_ANALYSIS.md`](CNOT_NOISE_ANALYSIS.md) | Full CNOT-only note: notation/variable definitions, theory (Part I), implementation & verification (Part II) |
+| [`resynthesize_gadget.py`](resynthesize_gadget.py) | Part 1: unitary-preserving CNOT reduction of the gadget (Qiskit/pytket, 16→14, verified) |
+| [`destructive_gadget.py`](destructive_gadget.py) | Part 2: destructive/VD gadget (2 CNOTs) — ideal-equivalence proof + CNOT-noise threshold vs controlled-SWAP + figure |
+| [`SWAP_GADGET_OPTIMIZATION.md`](SWAP_GADGET_OPTIMIZATION.md) | Write-up of both CNOT-reduction routes (same-unitary 16→14; same-observable 2 CNOTs) |
 | [`requirements.txt`](requirements.txt) | Dependencies (pinned minimums + tested versions) |
 
 ## Setup & run
@@ -238,6 +257,8 @@ python verify_analytic_decomposed.py  # analytic A/B/F_dec vs circuit; orientati
 python draw_decomposed.py          # decomposed Fredkin + full gadget circuit diagrams
 python draw_cnot_noise.py          # CNOT-only diagrams (CSWAP decomp, SWAP test, +CNOT noise)
 python pqec_cnot_threshold.py      # CNOT-only threshold eps2* (single-qubit gates ideal)
+python destructive_gadget.py       # 2-CNOT destructive/VD gadget: equivalence + threshold vs cSWAP
+python resynthesize_gadget.py      # unitary-preserving 16->14 CNOT reduction (needs qiskit/pytket)
 ```
 
 ### Verification output (excerpt)
