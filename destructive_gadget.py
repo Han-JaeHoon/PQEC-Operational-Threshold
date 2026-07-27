@@ -251,6 +251,31 @@ def main():
     fig.savefig("destructive_gadget.png", dpi=140)
     print("\n  saved  destructive_gadget.png")
 
+    _draw_circuit()
+
+
+def _draw_circuit():
+    """Draw the 2-CNOT destructive gadget -> circuit_destructive.png."""
+    rr = np.kron(make_noisy_bell(0.4), make_noisy_bell(0.4))
+
+    @qml.qnode(_dev)
+    def circ():
+        qml.QubitDensityMatrix(rr, wires=[0, 1, 2, 3])   # two noisy Bell copies
+        qml.CNOT(wires=[0, 2])                            # CNOT A1->B1
+        qml.Hadamard(0)
+        qml.CNOT(wires=[1, 3])                            # CNOT A2->B2
+        qml.Hadamard(1)
+        return [qml.expval(qml.PauliZ(w)) for w in range(4)]  # destructive readout
+
+    fig, ax = qml.draw_mpl(circ, decimals=None, style="pennylane",
+                           wire_order=[0, 1, 2, 3])()
+    ax.set_title("Destructive / virtual-distillation gadget (2 CNOTs, no ancilla)\n"
+                 "wires: 0=A1, 1=A2, 2=B1, 3=B2  |  Bell change CNOT(A_i->B_i)+H(A_i), "
+                 "then measure all", fontsize=10)
+    fig.savefig("circuit_destructive.png", dpi=150, bbox_inches="tight")
+    plt.close(fig)
+    print("  saved  circuit_destructive.png")
+
 
 if __name__ == "__main__":
     main()

@@ -200,21 +200,50 @@ register A, [3,4] = discarded register B):
 
 Full write-up: **[`SWAP_GADGET_OPTIMIZATION.md`](SWAP_GADGET_OPTIMIZATION.md)**.
 
-- **Same unitary** ([`resynthesize_gadget.py`](resynthesize_gadget.py)): Qiskit and
-  pytket both peephole-reduce the coherent gadget to **14 CNOTs** (verified
-  unitary-equivalent; `= 2×7`, the per-Fredkin optimum — a found count, not a proven
-  minimum).
-- **Same observable** ([`destructive_gadget.py`](destructive_gadget.py)): since PQEC
-  needs only `⟨O⟩ = Tr(Oρ²)/Tr(ρ²)`, the **destructive / virtual-distillation**
-  measurement (Bell-basis change, no ancilla, no controlled-SWAP) reproduces `⟨O⟩`
-  to `2e-16` (fidelity projector **and** generic Pauli) using only **2 CNOTs per
-  measurement setting**. Closed form `F_dest = (1+6s²t+9s²t²)/(4(1+3s²t²))`,
-  threshold `ε₂* = 1−1/√(2+2t−3t²)`; its **mean-fidelity** threshold is **~2.7–4.4×
-  higher** than the 16-CNOT controlled-SWAP. (Denominator = 1 Bell setting; a general
-  numerator needs several Pauli settings — so this is a per-setting gate count, not a
-  total-sampling claim. Measurement-only: yields `⟨O⟩`, not a coherent state.)
+**Why bother.** The two Fredkins decompose into **16 CNOTs**, and CNOTs are where the
+gate noise lives. Can we do the *same job* with fewer CNOTs? "Same job" has two
+meanings, and we did both.
+
+**Route A — keep the exact circuit** ([`resynthesize_gadget.py`](resynthesize_gadget.py)).
+The gadget `H·CSWAP·CSWAP·H` is a fixed 5-qubit unitary. Two peephole optimizers
+(Qiskit, pytket) reduce it **16 → 14 CNOTs**, each checked to implement the *identical*
+unitary. `14 = 2×7` (the per-Fredkin optimum). Safe but modest — the coherent gadget is
+unchanged. (14 is what the tools found, not a proven minimum.)
+
+**Route B — keep only the answer** ([`destructive_gadget.py`](destructive_gadget.py)).
+PQEC never needs the SWAP *unitary* — it needs one number, `F = Tr(Oρ²)/Tr(ρ²)`, which
+is the **expectation value of the SWAP operator** on the two copies. Instead of
+*applying* a controlled-SWAP (16 CNOTs), you can *measure* SWAP directly: rotate each
+qubit-pair into the SWAP eigenbasis with a **Bell-basis change** (one `CNOT + H` per
+pair) and read out. No ancilla, no controlled-SWAP — just **2 CNOTs**:
+
+![2-CNOT destructive gadget](circuit_destructive.png)
+
+Reading it (wires `0=A1, 1=A2, 2=B1, 3=B2`; the two noisy copies enter as
+`QubitDensityMatrix`): the two pink `⊕` are `CNOT(A1→B1)` and `CNOT(A2→B2)`; with the
+`H`s they form the Bell-basis change, then all four qubits are measured and combined
+classically.
+
+**Result.** This gives *exactly* the same `F` as the controlled-SWAP gadget — verified
+to `2e-16` for the fidelity projector **and** a generic Pauli — with the closed form
+
+```
+F_dest(t, ε₂) = (1 + 6 s² t + 9 s² t²) / (4 (1 + 3 s² t²)),   threshold  ε₂* = 1 − 1/√(2 + 2t − 3t²)
+```
+
+(`s = 1−ε₂`, `t = 1−ε`). Because only **2 CNOTs carry noise instead of 16**, its
+CNOT-noise threshold is **~2.7–4.4× higher** (left: fidelity vs per-CNOT noise;
+right: threshold vs input noise):
 
 ![destructive vs controlled-SWAP](destructive_gadget.png)
+
+**Honest fine print.** (i) the `~2.7–4.4×` is a *mean-fidelity* threshold at fixed
+per-CNOT `ε₂`; total sampling cost also depends on how many measurements you take;
+(ii) only the denominator `Tr(ρ²)` comes from one Bell measurement — a general numerator
+needs several Pauli measurement **settings** (each still a 2-CNOT circuit), so "2 CNOTs"
+is a *per-setting* cost; (iii) the destructive gadget is **measurement-only** (returns
+`⟨O⟩`, not a coherent purified state) — an alternative *measurement* of the
+virtual-distillation estimator, matching the paper's VD framing.
 
 ## Files
 
@@ -236,7 +265,7 @@ Full write-up: **[`SWAP_GADGET_OPTIMIZATION.md`](SWAP_GADGET_OPTIMIZATION.md)**.
 | [`pqec_cnot_threshold.py`](pqec_cnot_threshold.py) | CNOT-only threshold `ε₂*` (single-qubit gates ideal): closed forms (`F`, `Q`, `N_Φ`, `c_⊥`, `c_z`), circuit checks incl. effective-state anisotropy, threshold table + figure |
 | [`CNOT_NOISE_ANALYSIS.md`](CNOT_NOISE_ANALYSIS.md) | Full CNOT-only note: notation/variable definitions, theory (Part I), implementation & verification (Part II) |
 | [`resynthesize_gadget.py`](resynthesize_gadget.py) | Part 1: unitary-preserving CNOT reduction of the gadget (Qiskit/pytket, 16→14, verified) |
-| [`destructive_gadget.py`](destructive_gadget.py) | Part 2: destructive/VD gadget (2 CNOTs) — ideal-equivalence proof + CNOT-noise threshold vs controlled-SWAP + figure |
+| [`destructive_gadget.py`](destructive_gadget.py) | Part 2: destructive/VD gadget (2 CNOTs) — ideal-equivalence proof, closed form, CNOT-noise threshold vs controlled-SWAP; draws `circuit_destructive.png` + `destructive_gadget.png` |
 | [`SWAP_GADGET_OPTIMIZATION.md`](SWAP_GADGET_OPTIMIZATION.md) | Write-up of both CNOT-reduction routes (same-unitary 16→14; same-observable 2 CNOTs) |
 | [`requirements.txt`](requirements.txt) | Dependencies (pinned minimums + tested versions) |
 
