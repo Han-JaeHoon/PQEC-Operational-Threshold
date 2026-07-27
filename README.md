@@ -26,6 +26,10 @@ state and the tooling to certify it, before adding the (noisy) purification gadg
 | 2 | Purification (SWAP-test) gadget — ideal, verified on `ρ_ε` | **done** |
 | 3a | Fredkin **global** depolarizing — analytic benchmark (no threshold) | **done** |
 | 3b | **Decomposed** Fredkin (native gates) + realistic noise — operational threshold | **done** |
+| 4a | Unitary-preserving CNOT reduction (16→14, two optimizers, verified) | **done** |
+| 4b | Destructive/VD gadget (2 CNOTs), closed form, ~2.7–4.4× higher threshold | **done** |
+| 5a/5b | Variational (PQC) compiling of the gadget unitary / coherent state — trainability barrier | **done** |
+| 5c | Noise-aware PQC training of the purified observable — threshold vs textbook/4b | **done** |
 
 ## The noisy input state
 
@@ -245,6 +249,58 @@ is a *per-setting* cost; (iii) the destructive gadget is **measurement-only** (r
 `⟨O⟩`, not a coherent purified state) — an alternative *measurement* of the
 virtual-distillation estimator, matching the paper's VD framing.
 
+### Approximating the gadget with a trained PQC (Step 5)
+
+Full write-up: **[`PQC_APPROX.md`](PQC_APPROX.md)**.
+
+Step 4 reduced the CNOT count *exactly*. Step 5 asks the *learned* version: can a
+parameterized quantum circuit (PQC) be **trained** to play the gadget's role with
+fewer CNOTs? As in Step 4, "role" has a ladder of meanings, and we did all three —
+reproduce the **unitary** (5a), the **coherent state** on the physical input (5b), or
+just the purified **observable**, noise-aware (5c). The ansatz has a CNOT budget `B`
+as its knob; the same ansatz runs as a fast numpy unitary (5a/5b) and as a noisy
+`default.mixed` circuit (5c), verified identical to machine precision.
+
+**Steps 5a/5b — the trainability barrier.** Trying to compile the gadget *unitary*
+(5a) or *coherent state* (5b) runs straight into barren plateaus. With **exact**
+analytic gradients, many restarts, the plateau-mitigating **LHST** local cost (Khatri
+et al.), and rich ansätze up to **375 params / 24 CNOTs**, the best infidelity floors
+around `δ ≈ 0.44` (5a) / `0.29` (5b) at 16 CNOTs — nowhere near exact, even though 16
+CNOTs *can* represent `U` exactly. So from-scratch variational compiling does **not**
+beat Step 4a. The coherent state (5b) is consistently easier than the unitary (5a) —
+the same relaxation ladder as Step 4, pointing at the observable.
+
+![variational compiling barrier](pqc_compile_pareto.png)
+
+**Step 5c — noise-aware observable training (the useful route).** Relaxing to the
+operational scalar `F(ε)` (matched for `O ∈ {|Φ⁺⟩⟨Φ⁺|, ZZ}`) is a low-dimensional,
+plateau-free target that trains easily at a **small** budget (`B=6`). To keep the
+learned circuit an *honest* gadget we match the ancilla-parity **correlators**
+`⟨Z_a⟩ = Tr(ρ²)` and `⟨Z_a⊗O⟩ = Tr(Oρ²)` (matching only the ratio `F` is degenerate —
+the optimizer can drive the denominator to zero and fake any value). We then compare
+a **noise-free-trained** `θ_free` against a **noise-aware-trained** `θ_aware`
+(depolarizing `ε₂` in the loss).
+
+**Positive result — fewer CNOTs lift the threshold.** `θ_free` matches `F_exact(ε)` to
+`~0.001` at `B = 6` CNOTs, and deployed under CNOT noise it **beats the 16-CNOT
+textbook** at every input noise, approaching the exact 2-CNOT Step-4b ceiling:
+
+| input `ε` | 0.10 | 0.20 | 0.30 | 0.40 | 0.50 | 0.60 |
+|-----------|------|------|------|------|------|------|
+| textbook cSWAP (16) `ε₂*` | 0.033 | 0.061 | 0.085 | 0.103 | 0.117 | 0.126 |
+| **PQC `θ_free` (6) `ε₂*`** | **0.051** | **0.100** | **0.148** | **0.194** | **0.236** | **0.273** |
+| Step 4b destructive (2) `ε₂*` | 0.146 | 0.229 | 0.280 | 0.313 | 0.333 | 0.343 |
+
+**Negative result — noise-aware training adds nothing.** Baking the CNOT noise into the
+loss gives **no threshold gain**: matching the ratio `F` is denominator-degenerate,
+and matching the absolute correlators is misaligned with the ratio (and collapses to
+an input-independent solution at strong noise). This is expected — depolarizing is
+**unital**, so its `F`-bias cannot be undone by re-choosing single-qubit rotations.
+**The entire win is structural (fewer CNOTs), exactly as in Step 4** — reinforcing that
+the destructive Step-4b gadget, not a learned one, is the right low-CNOT tool.
+
+![noise-aware PQC threshold](pqc_noise_aware.png)
+
 ## Files
 
 | File | Description |
@@ -267,6 +323,10 @@ virtual-distillation estimator, matching the paper's VD framing.
 | [`resynthesize_gadget.py`](resynthesize_gadget.py) | Step 4a: unitary-preserving CNOT reduction of the gadget (Qiskit/pytket, 16→14, verified) |
 | [`destructive_gadget.py`](destructive_gadget.py) | Step 4b: destructive/VD gadget (2 CNOTs) — ideal-equivalence proof, closed form, CNOT-noise threshold vs controlled-SWAP; draws `circuit_destructive.png` + `destructive_gadget.png` |
 | [`SWAP_GADGET_OPTIMIZATION.md`](SWAP_GADGET_OPTIMIZATION.md) | Write-up of both CNOT-reduction routes (same-unitary 16→14; same-observable 2 CNOTs) |
+| [`pqc_common.py`](pqc_common.py) | Step 5 shared: target `U`, PQC ansatz, fast numpy unitary + **exact** gradients, LHST cost, PennyLane noisy executor, read-out, references (self-test) |
+| [`pqc_compile.py`](pqc_compile.py) | Step 5a/5b: variational compiling sweep (global + LHST costs); figure `pqc_compile_pareto.png` |
+| [`pqc_noise_aware.py`](pqc_noise_aware.py) | Step 5c: noise-aware observable training + threshold comparison; figure `pqc_noise_aware.png` |
+| [`PQC_APPROX.md`](PQC_APPROX.md) | Step 5 write-up: three targets, the LHST derivation, the trainability barrier, and the noise-aware threshold result |
 | [`requirements.txt`](requirements.txt) | Dependencies (pinned minimums + tested versions) |
 
 ## Setup & run

@@ -330,6 +330,53 @@ SWAP_reg O_A)·V†`; `F = ⟨O_num⟩/⟨O_den⟩`.
 - **Caveat:** measurement-only (yields `⟨O⟩`, not a coherent purified state for
   interleaving) — an alternative destructive measurement of the same VD estimator.
 
+---
+
+## 2026-07-27 — Step 5: variational (PQC) approximation of the gadget
+
+Write-up: `PQC_APPROX.md`. Can a **trained** PQC play the gadget's role with fewer
+CNOTs? Three targets, mirroring Step 4's relaxation ladder (unitary → state →
+observable). Shared infra `pqc_common.py` (target `U`, ansatz with CNOT-budget knob,
+fast numpy unitary + **exact analytic gradients** matched to FD at `1e-11`, LHST cost,
+PennyLane noisy executor, read-out; self-test to `1e-15`).
+
+**Step 5a/5b — trainability barrier (`pqc_compile.py`).** Compiling the gadget
+*unitary* (5a, global HS cost `1−|Tr(U†V)|²/32²`) or *coherent state* (5b, the
+`32×16` ancilla-`|0⟩` block) hits **barren plateaus**. With exact gradients, 16
+restarts, the plateau-mitigating **LHST** local cost (derived in the write-up, matched
+to FD), and rich ansätze up to **375 params / 24 CNOTs**, the best infidelity floors
+at `δ ≈ 0.44` (5a) / `0.29` (5b) at `B=16` — nowhere near exact, though 16 CNOTs *can*
+represent `U`. LHST does not rescue the global fidelity. So from-scratch variational
+compiling does **not** beat Step 4a. 5b < 5a at every budget (same ladder as Step 4).
+Figure `pqc_compile_pareto.png`.
+
+**Step 5c — noise-aware observable training (`pqc_noise_aware.py`).** Relaxing to the
+scalar `F(ε)` (matched for `O ∈ {Φ⁺, ZZ}`) is plateau-free and trains to `loss ≈ 1e-5`
+at `B=6`. To stay an *honest* gadget we match the **correlators** `⟨Z_a⟩=Tr(ρ²)`,
+`⟨Z_a⊗O⟩=Tr(Oρ²)` (matching only the ratio `F` is denominator-degenerate — the
+optimizer drives `⟨Z_a⟩→0` and fakes `F>1`).
+
+- **Positive:** `θ_free` (6 CNOTs) matches `F_exact` to `~0.001` and, under per-CNOT
+  depolarizing, **beats the 16-CNOT textbook** at every `ε`, approaching the exact
+  2-CNOT Step-4b ceiling:
+
+  | input `ε` | 0.10 | 0.20 | 0.30 | 0.40 | 0.50 | 0.60 |
+  |-----------|------|------|------|------|------|------|
+  | textbook (16) `ε₂*` | 0.033 | 0.061 | 0.085 | 0.103 | 0.117 | 0.126 |
+  | PQC `θ_free` (6) `ε₂*` | 0.051 | 0.100 | 0.148 | 0.194 | 0.236 | 0.273 |
+  | Step 4b (2) `ε₂*` | 0.146 | 0.229 | 0.280 | 0.313 | 0.333 | 0.343 |
+
+- **Negative:** noise-aware training gives **no** threshold gain. The ratio objective
+  is degenerate; the absolute-correlator objective is misaligned with `F` and, at
+  strong noise, collapses to an input-independent (constant-`⟨Z_a⟩`) minimum.
+  Depolarizing is **unital** → its `F`-bias is uncompensable by unitary
+  re-parameterization. The threshold win is purely **structural** (fewer CNOTs).
+  Figure `pqc_noise_aware.png`.
+
+**Takeaway:** the learned setting reproduces Step 4's lesson — target the *observable*,
+and the advantage is *structural* (fewer noisy CNOTs / the destructive gadget), not
+something a generic PQC or noise-aware training can add.
+
 ### Next
 
 - **optimized decomposition** (Cruz–Murta 7-CNOT; 5 two-qubit-gate Smolin–DiVincenzo)

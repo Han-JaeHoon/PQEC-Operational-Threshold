@@ -7,7 +7,8 @@
 
 pennylane>=0.45      # verified with 0.45.1  (mixed-state simulator, QubitChannel)
 numpy>=2.0           # verified with 2.4.6
-matplotlib>=3.8      # verified with 3.11.1  (circuit drawing only)
+scipy>=1.10          # verified with 1.17.1  (L-BFGS-B for Step-5 PQC training)
+matplotlib>=3.8      # verified with 3.11.1  (circuit drawing + Step-5 figures)
 
 # Tested on Python 3.11.
 
