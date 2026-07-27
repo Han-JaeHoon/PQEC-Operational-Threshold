@@ -5,16 +5,16 @@ wire 0, retained register `A=(A1,A2)` = wires 1,2, discarded `B=(B1,B2)` = wires
 3,4) costs **16 CNOTs** with the textbook 8-CNOT Fredkin decomposition. We reduce
 this in two senses of "same role":
 
-- **(1) Same unitary** — keep the exact 5-qubit unitary, fewer CNOTs.
-- **(2) Same measured observable** — reproduce only `F = Tr(Oρ²)/Tr(ρ²)`, which is
+- **Step 4a — Same unitary** — keep the exact 5-qubit unitary, fewer CNOTs.
+- **Step 4b — Same measured observable** — reproduce only `F = Tr(Oρ²)/Tr(ρ²)`, which is
   all PQEC uses; this allows a much larger reduction.
 
-All results are checked rigorously (unitary equivalence for (1); machine-precision
-observable equivalence for (2)).
+All results are checked rigorously (unitary equivalence for Step 4a; machine-precision
+observable equivalence for Step 4b).
 
 ---
 
-## Part 1 — Unitary-preserving reduction: 16 → 14 CNOTs
+## Step 4a — Unitary-preserving reduction: 16 → 14 CNOTs
 
 Script: [`resynthesize_gadget.py`](resynthesize_gadget.py). The gadget is
 Clifford + 2 Toffoli. Two independent optimizers were run, and each output was
@@ -44,7 +44,7 @@ keeping the exact coherent gadget.
 
 ---
 
-## Part 2 — Measurement-equivalent gadget: 2 CNOTs
+## Step 4b — Measurement-equivalent gadget: 2 CNOTs
 
 Script: [`destructive_gadget.py`](destructive_gadget.py). PQEC only needs the
 purified observable `F = Tr(Oρ²)/Tr(ρ²)`. This is exactly what the **destructive
@@ -125,8 +125,8 @@ controlled-SWAP gadget.
 | | CNOTs / measurement circuit | keeps | `ε₂*` @ `ε=0.4` |
 |--|:---------------------------:|-------|:---------------:|
 | textbook controlled-SWAP | 16 | coherent purified state | 0.103 |
-| optimized controlled-SWAP (Part 1) | 14 | coherent purified state | (≳0.103) |
-| destructive / VD (Part 2) | **2** (per setting) | observable `⟨O⟩` only | **0.313** |
+| optimized controlled-SWAP (Step 4a) | 14 | coherent purified state | (≳0.103) |
+| destructive / VD (Step 4b) | **2** (per setting) | observable `⟨O⟩` only | **0.313** |
 
 The per-circuit two-qubit-gate count drops **7–8×** (16→2, or 14→2), and the
 destructive/VD gadget has a **2.7–4.4× higher mean-fidelity threshold**. For an
@@ -142,4 +142,4 @@ threshold. The destructive route is an alternative destructive **measurement** o
 the same virtual-distillation estimator — matching the VD framing of the original
 PQEC paper — not a re-compilation of the controlled-SWAP unitary.
 
-Optional dependencies for Part 1: `qiskit`, `pytket` (`resynthesize_gadget.py`).
+Optional dependencies for Step 4a: `qiskit`, `pytket` (`resynthesize_gadget.py`).

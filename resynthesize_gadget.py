@@ -1,5 +1,5 @@
 """
-Unitary-preserving CNOT reduction of the SWAP-test gadget (Part 1).
+Unitary-preserving CNOT reduction of the SWAP-test gadget (Step 4a).
 ==================================================================
 
 The coherent gadget  U = H_a . CSWAP(a;A1,B1) . CSWAP(a;A2,B2) . H_a  on 5 qubits

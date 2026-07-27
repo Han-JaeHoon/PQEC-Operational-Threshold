@@ -11,6 +11,6 @@ matplotlib>=3.8      # verified with 3.11.1  (circuit drawing only)
 
 # Tested on Python 3.11.
 
-# Optional (only for resynthesize_gadget.py, Part 1 unitary-preserving CNOT count):
+# Optional (only for resynthesize_gadget.py, Step 4a unitary-preserving CNOT count):
 #   qiskit>=1.0      # verified with 2.5.1
 #   pytket           # verified with 2.18.1

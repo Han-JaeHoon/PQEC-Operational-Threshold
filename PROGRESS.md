@@ -291,19 +291,19 @@ threshold figure `pqec_cnot_threshold.png`.
 
 ---
 
-## 2026-07-24 — Reducing the gadget CNOT count (two routes)
+## 2026-07-24 — Reducing the gadget CNOT count (Step 4: two routes)
 
 Write-up: `SWAP_GADGET_OPTIMIZATION.md`. Goal: same role as `H·CSWAP·CSWAP·H`,
 fewer CNOTs. Two senses of "same role", both rigorously verified.
 
-**Part 1 — same unitary (`resynthesize_gadget.py`).** The coherent gadget is
+**Step 4a — same unitary (`resynthesize_gadget.py`).** The coherent gadget is
 Clifford + 2 Toffoli. Qiskit (`opt2/3`) and pytket (`FullPeepholeOptimise`) both
 **find 16 → 14 CNOTs**, each verified to implement the identical 5-qubit unitary
 (up to global phase). `14 = 2×7` is the per-Fredkin optimum. (This is the count the
 optimizers produced, **not a proof of minimality** over the full 5-qubit unitary.
 PyZX minimizes T-count → 27 CNOTs, wrong metric.)
 
-**Part 2 — same observable (`destructive_gadget.py`).** PQEC needs only
+**Step 4b — same observable (`destructive_gadget.py`).** PQEC needs only
 `F = Tr(Oρ²)/Tr(ρ²)`, which the **destructive / virtual-distillation** measurement
 returns with no ancilla and no controlled-SWAP: a Bell-basis change
 `V = [H_{A1}CNOT_{A1→B1}][H_{A2}CNOT_{A2→B2}]` (**2 CNOTs**), then read the fixed

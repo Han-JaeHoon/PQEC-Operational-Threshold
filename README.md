@@ -196,7 +196,7 @@ register A, [3,4] = discarded register B):
 
 ![SWAP test, CNOT-only noise](circuit_swaptest_cnot_noise.png)
 
-### Reducing the gadget's CNOT count
+### Reducing the gadget's CNOT count (Step 4)
 
 Full write-up: **[`SWAP_GADGET_OPTIMIZATION.md`](SWAP_GADGET_OPTIMIZATION.md)**.
 
@@ -204,13 +204,13 @@ Full write-up: **[`SWAP_GADGET_OPTIMIZATION.md`](SWAP_GADGET_OPTIMIZATION.md)**.
 gate noise lives. Can we do the *same job* with fewer CNOTs? "Same job" has two
 meanings, and we did both.
 
-**Route A — keep the exact circuit** ([`resynthesize_gadget.py`](resynthesize_gadget.py)).
+**Step 4a — keep the exact circuit** ([`resynthesize_gadget.py`](resynthesize_gadget.py)).
 The gadget `H·CSWAP·CSWAP·H` is a fixed 5-qubit unitary. Two peephole optimizers
 (Qiskit, pytket) reduce it **16 → 14 CNOTs**, each checked to implement the *identical*
 unitary. `14 = 2×7` (the per-Fredkin optimum). Safe but modest — the coherent gadget is
 unchanged. (14 is what the tools found, not a proven minimum.)
 
-**Route B — keep only the answer** ([`destructive_gadget.py`](destructive_gadget.py)).
+**Step 4b — keep only the answer** ([`destructive_gadget.py`](destructive_gadget.py)).
 PQEC never needs the SWAP *unitary* — it needs one number, `F = Tr(Oρ²)/Tr(ρ²)`, which
 is the **expectation value of the SWAP operator** on the two copies. Instead of
 *applying* a controlled-SWAP (16 CNOTs), you can *measure* SWAP directly: rotate each
@@ -264,8 +264,8 @@ virtual-distillation estimator, matching the paper's VD framing.
 | [`draw_cnot_noise.py`](draw_cnot_noise.py) | Draws the CNOT-only diagrams: CSWAP decomposition, SWAP test, and SWAP test with 2-qubit depol after each CNOT (barrier-separated stages) |
 | [`pqec_cnot_threshold.py`](pqec_cnot_threshold.py) | CNOT-only threshold `ε₂*` (single-qubit gates ideal): closed forms (`F`, `Q`, `N_Φ`, `c_⊥`, `c_z`), circuit checks incl. effective-state anisotropy, threshold table + figure |
 | [`CNOT_NOISE_ANALYSIS.md`](CNOT_NOISE_ANALYSIS.md) | Full CNOT-only note: notation/variable definitions, theory (Part I), implementation & verification (Part II) |
-| [`resynthesize_gadget.py`](resynthesize_gadget.py) | Part 1: unitary-preserving CNOT reduction of the gadget (Qiskit/pytket, 16→14, verified) |
-| [`destructive_gadget.py`](destructive_gadget.py) | Part 2: destructive/VD gadget (2 CNOTs) — ideal-equivalence proof, closed form, CNOT-noise threshold vs controlled-SWAP; draws `circuit_destructive.png` + `destructive_gadget.png` |
+| [`resynthesize_gadget.py`](resynthesize_gadget.py) | Step 4a: unitary-preserving CNOT reduction of the gadget (Qiskit/pytket, 16→14, verified) |
+| [`destructive_gadget.py`](destructive_gadget.py) | Step 4b: destructive/VD gadget (2 CNOTs) — ideal-equivalence proof, closed form, CNOT-noise threshold vs controlled-SWAP; draws `circuit_destructive.png` + `destructive_gadget.png` |
 | [`SWAP_GADGET_OPTIMIZATION.md`](SWAP_GADGET_OPTIMIZATION.md) | Write-up of both CNOT-reduction routes (same-unitary 16→14; same-observable 2 CNOTs) |
 | [`requirements.txt`](requirements.txt) | Dependencies (pinned minimums + tested versions) |
 
