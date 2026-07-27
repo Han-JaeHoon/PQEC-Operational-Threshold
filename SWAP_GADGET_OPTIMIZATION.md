@@ -28,10 +28,16 @@ verified to implement the **same 5-qubit unitary** (up to global phase):
 | pytket `FullPeepholeOptimise` | **14** | ✓ |
 | PyZX `full_reduce` (ZX) | 27 | ✓ (T-count tool — worse for CNOTs) |
 
-Both peephole optimizers converge to **14 CNOTs = 2 × 7**, i.e. the per-Fredkin
-optimum (cf. the 7-CNOT Fredkin, Cruz–Murta arXiv:2305.18128); the shared ancilla
-control gives no further CNOT saving at fixed unitary. PyZX minimizes T-count, not
-CNOT-count, so it is not the right tool for this metric.
+Both peephole optimizers **found** 14 CNOTs, which equals **2 × 7** — the known
+per-Fredkin optimum (cf. the 7-CNOT Fredkin, Cruz–Murta arXiv:2305.18128). PyZX
+minimizes T-count, not CNOT-count, so it is not the right tool for this metric.
+
+**Scope of the claim.** "16 → 14" means *these optimizers produced a verified
+14-CNOT circuit with the same unitary*. It is **not** a proof that 14 is the
+minimum: minimality of the CNOT count over the full 5-qubit controlled
+register-SWAP unitary would need a lower-bound argument or exhaustive synthesis,
+which we have not done. The shared ancilla control gave no *further* reduction with
+these tools.
 
 **Takeaway:** a modest, safe 12.5% CNOT reduction is available for free while
 keeping the exact coherent gadget.
@@ -59,6 +65,18 @@ F     = ⟨O_num⟩ / ⟨O_den⟩
 The experiment applies the (noisy) Bell change `V` and reads the fixed ideal-frame
 observables `O_den`, `O_num`.
 
+**Measurement cost — an important clarification.** The denominator `O_den = Π` is
+**diagonal** in the post-`V` computational basis, so `Tr(ρ²)` comes from a *single*
+Bell measurement. The numerator `O_num` is **not** diagonal there — its Pauli
+expansion has **40 nonzero strings for `O=|Φ⁺⟩⟨Φ⁺|`** and **8 for `O=ZZ`** — so a
+general numerator needs *several Pauli measurement settings* (each a 2-CNOT circuit
++ single-qubit rotations, combined classically). Hence **"2 CNOTs" is the per-setting
+two-qubit-gate cost**, not a claim that one circuit yields every correlator. The
+*mean* value `F` (and therefore the threshold) is unaffected by this — it only
+changes the shot/setting budget. So this is best read as an **alternative
+destructive measurement of the same VD estimator**, not a compilation of the
+controlled-SWAP unitary.
+
 **Verification (ideal, `ε₂=0`).** `F_dest` equals both the controlled-SWAP gadget
 and the exact trace `Tr(Oρ²)/Tr(ρ²)` to `2e-16`, for the fidelity projector
 `O=|Φ⁺⟩⟨Φ⁺|` **and** a generic Pauli `O=ZZ`:
@@ -81,8 +99,18 @@ ideal — same convention as the controlled-SWAP study):
 | 0.50 | 0.3333 | 0.1167 | 2.86 |
 | 0.60 | 0.3435 | 0.1257 | 2.73 |
 
-The destructive gadget tolerates **~3–4× higher per-CNOT noise**, because only
-2 CNOTs carry noise instead of 16. Figure: `destructive_gadget.png`.
+The destructive gadget tolerates **~2.7–4.4× higher per-CNOT noise** (this is a
+**mean-fidelity threshold** at fixed per-CNOT `ε₂`, not a total-resource claim —
+the full sampling cost also depends on the number of Pauli settings for the
+numerator). Figure: `destructive_gadget.png`.
+
+**Exact closed form** (single-qubit gates ideal, `s=1−ε₂`, `t=1−ε`; verified vs
+circuit to `~1e-16`):
+
+```
+F_dest(t, ε₂) = (1 + 6 s² t + 9 s² t²) / (4 (1 + 3 s² t²))       [F_dest(t,0) = (1+3t)²/(4(1+3t²))]
+threshold     ε₂* = q_th(t) = 1 − 1/√(2 + 2t − 3t²)
+```
 
 **Caveat.** The destructive gadget is **measurement-only**: it yields `⟨O⟩` but not
 a coherent purified state to feed forward. It is the correct tool for the
@@ -94,14 +122,24 @@ controlled-SWAP gadget.
 
 ## Summary
 
-| | CNOTs | keeps | best `ε₂*` @ `ε=0.4` |
-|--|:-----:|-------|:--------------------:|
+| | CNOTs / measurement circuit | keeps | `ε₂*` @ `ε=0.4` |
+|--|:---------------------------:|-------|:---------------:|
 | textbook controlled-SWAP | 16 | coherent purified state | 0.103 |
 | optimized controlled-SWAP (Part 1) | 14 | coherent purified state | (≳0.103) |
-| destructive / VD (Part 2) | **2** | observable `⟨O⟩` only | **0.313** |
+| destructive / VD (Part 2) | **2** (per setting) | observable `⟨O⟩` only | **0.313** |
 
-For the operational-threshold study — which needs only `⟨O⟩` — the destructive/VD
-gadget is both the largest CNOT reduction and the most noise-tolerant, and it
-matches the virtual-distillation framing of the original PQEC paper.
+The per-circuit two-qubit-gate count drops **7–8×** (16→2, or 14→2), and the
+destructive/VD gadget has a **2.7–4.4× higher mean-fidelity threshold**. For an
+M-qubit register the Bell-change costs `M` CNOTs vs `8M` (textbook) / `7M`
+(optimized) / for the controlled-SWAP.
+
+Caveats to keep the claim honest: (i) 14 is what the optimizers found, not a proven
+minimum; (ii) fewer CNOTs *usually* helps but the threshold also depends on CNOT
+topology and noise propagation (recomputed here, not assumed); (iii) the numerator
+needs several Pauli measurement settings, so "2 CNOTs" is a per-setting cost and the
+*total* sampling cost (shots × settings) is a separate question from the mean-bias
+threshold. The destructive route is an alternative destructive **measurement** of
+the same virtual-distillation estimator — matching the VD framing of the original
+PQEC paper — not a re-compilation of the controlled-SWAP unitary.
 
 Optional dependencies for Part 1: `qiskit`, `pytket` (`resynthesize_gadget.py`).

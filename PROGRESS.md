@@ -298,9 +298,10 @@ fewer CNOTs. Two senses of "same role", both rigorously verified.
 
 **Part 1 — same unitary (`resynthesize_gadget.py`).** The coherent gadget is
 Clifford + 2 Toffoli. Qiskit (`opt2/3`) and pytket (`FullPeepholeOptimise`) both
-reduce **16 → 14 CNOTs**, each verified to implement the identical 5-qubit unitary
-(up to global phase). `14 = 2×7` is the per-Fredkin optimum; the shared ancilla
-control gives no further saving. (PyZX minimizes T-count → 27 CNOTs, wrong metric.)
+**find 16 → 14 CNOTs**, each verified to implement the identical 5-qubit unitary
+(up to global phase). `14 = 2×7` is the per-Fredkin optimum. (This is the count the
+optimizers produced, **not a proof of minimality** over the full 5-qubit unitary.
+PyZX minimizes T-count → 27 CNOTs, wrong metric.)
 
 **Part 2 — same observable (`destructive_gadget.py`).** PQEC needs only
 `F = Tr(Oρ²)/Tr(ρ²)`, which the **destructive / virtual-distillation** measurement
@@ -311,8 +312,9 @@ SWAP_reg O_A)·V†`; `F = ⟨O_num⟩/⟨O_den⟩`.
 
 - **Ideal equivalence verified to `2e-16`** — `F_dest` = controlled-SWAP gadget =
   `Tr(Oρ²)/Tr(ρ²)`, for `O=|Φ⁺⟩⟨Φ⁺|` and generic `O=ZZ`.
-- **CNOT-noise threshold ~3–4× higher** than the 16-CNOT controlled-SWAP (2 noisy
-  CNOTs vs 16):
+- **Exact closed form** (verified vs circuit `~1e-16`), `s=1−ε₂`, `t=1−ε`:
+  `F_dest = (1+6s²t+9s²t²)/(4(1+3s²t²))`,  threshold `ε₂* = 1 − 1/√(2+2t−3t²)`.
+- **~2.7–4.4× higher MEAN-FIDELITY threshold** than the 16-CNOT controlled-SWAP:
 
   | input `ε` | 0.10 | 0.20 | 0.30 | 0.40 | 0.50 | 0.60 |
   |-----------|------|------|------|------|------|------|
@@ -320,8 +322,13 @@ SWAP_reg O_A)·V†`; `F = ⟨O_num⟩/⟨O_den⟩`.
   | cSWAP `ε₂*` (16 CNOT) | 0.033 | 0.061 | 0.085 | 0.103 | 0.117 | 0.126 |
 
   Figure `destructive_gadget.png`.
+- **Measurement-cost caveat.** The denominator `Tr(ρ²)` is one Bell measurement
+  (diagonal), but a general numerator `M_O` is not diagonal (40 nonzero Pauli
+  strings for `Φ⁺`, 8 for `ZZ`) and needs several Pauli settings — so "2 CNOTs" is a
+  **per-setting** cost, and the threshold above is a mean-bias statement, not a
+  total-resource (shots × settings) claim.
 - **Caveat:** measurement-only (yields `⟨O⟩`, not a coherent purified state for
-  interleaving). Matches the paper's virtual-distillation framing.
+  interleaving) — an alternative destructive measurement of the same VD estimator.
 
 ### Next
 

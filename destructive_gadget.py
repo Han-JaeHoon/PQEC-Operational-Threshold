@@ -11,8 +11,19 @@ is the purified observable
 That can be obtained *without* an ancilla or any controlled-SWAP, via the
 destructive SWAP test / virtual-distillation measurement
 (Garcia-Escartin & Chamorro-Posada 2013; Huggins et al. 2021): apply a Bell-basis
-change between corresponding qubits of the two copies and read out.  For an
-M-qubit register this uses only **M CNOTs** (here M = 2) instead of 16.
+change between corresponding qubits of the two copies and read out.  The Bell-basis
+change is **M CNOTs** per measurement circuit (here M = 2), vs 16 for the
+controlled-SWAP gadget.
+
+IMPORTANT (measurement cost).  The DENOMINATOR Tr(rho^2) = <SWAP_reg> is diagonal
+in the post-Bell-change computational basis, so it comes from a *single* Bell
+measurement.  A general NUMERATOR observable M_O = 1/2[(O_A(x)I)SWAP + SWAP(O_A(x)I)]
+is NOT diagonal there (e.g. its Pauli expansion has 40 nonzero strings for
+O=|Phi+><Phi+|, 8 for O=ZZ), so the numerator generally needs *several Pauli
+measurement settings* (each a 2-CNOT circuit + single-qubit rotations), combined
+classically.  Thus "2 CNOTs" is the per-setting two-qubit-gate cost, not a claim
+that one circuit yields every correlator.  The mean value F below (and hence the
+threshold) is independent of this -- it only affects the sampling/shot budget.
 
 Construction (registers A=(A1,A2), B=(B1,B2), qubits (0,1,2,3), no ancilla):
 
@@ -147,6 +158,18 @@ def threshold_dest(eps, hi=0.98):
     return 0.5 * (lo + hi_)
 
 
+# --- exact closed forms (s = 1-eps2, t = 1-eps); verified vs circuit to ~1e-16 --
+def F_dest_closed(t, eps2):
+    """F_dest = (1 + 6 s^2 t + 9 s^2 t^2) / (4 (1 + 3 s^2 t^2)),  s = 1-eps2."""
+    s = 1 - eps2
+    return (1 + 6 * s**2 * t + 9 * s**2 * t**2) / (4 * (1 + 3 * s**2 * t**2))
+
+
+def threshold_dest_closed(t):
+    """Root of F_dest = F_bare:  q_th = 1 - 1/sqrt(2 + 2t - 3 t^2)."""
+    return 1 - 1 / np.sqrt(2 + 2 * t - 3 * t**2)
+
+
 # ===========================================================================
 def main():
     print("=" * 78)
@@ -172,17 +195,27 @@ def main():
     print(f"   max deviation = {worst:.2e}   "
           f"{'PASS' if worst < 1e-12 else 'FAIL'}")
 
-    # (1) CNOT-noise threshold comparison
+    # (0b) closed forms  F_dest = (1+6s^2 t+9 s^2 t^2)/(4(1+3 s^2 t^2)),
+    #      q_th = 1 - 1/sqrt(2+2t-3t^2)   (verified vs circuit)
+    errC = 0.0
+    for eps in [0.1, 0.3, 0.5]:
+        t = 1 - eps
+        for q in [0.0, 0.1, 0.25, 0.4]:
+            errC = max(errC, abs(F_dest(eps, q) - F_dest_closed(t, q)))
+    print(f"\n (0b) closed form  F_dest = (1+6s^2 t+9 s^2 t^2)/(4(1+3 s^2 t^2))  "
+          f"vs circuit: max err {errC:.1e}")
+
+    # (1) CNOT-noise threshold comparison (mean-fidelity threshold, fixed per-CNOT q)
     print("\n (1) CNOT-noise threshold eps2*  (single-qubit gates ideal):")
-    print(f"   {'eps':>5} {'dest (2 CNOT)':>14} {'cSWAP (16 CNOT)':>16} {'ratio':>7}")
-    rows = []
+    print(f"   {'eps':>5} {'dest circ':>10} {'dest closed':>12} {'cSWAP(16)':>11} {'ratio':>7}")
     for eps in [0.10, 0.20, 0.30, 0.40, 0.50, 0.60]:
         d = threshold_dest(eps)
+        dc = threshold_dest_closed(1 - eps)
         c = eps2_star_cswap(1 - eps)
-        rows.append((eps, d, c))
-        print(f"   {eps:>5.2f} {d:>14.4f} {c:>16.4f} {d / c:>7.2f}")
-    print("   -> the destructive gadget tolerates ~3-4x higher per-CNOT noise")
-    print("      (2 noisy CNOTs instead of 16).")
+        print(f"   {eps:>5.2f} {d:>10.4f} {dc:>12.4f} {c:>11.4f} {d / c:>7.2f}")
+    print("   -> ~2.7-4.4x higher MEAN-FIDELITY threshold at fixed per-CNOT q.")
+    print("      (This is a mean-bias statement; total sampling cost also depends on")
+    print("       the number of Pauli measurement settings for the numerator.)")
 
     # ---- Figure ----------------------------------------------------------
     fig, axes = plt.subplots(1, 2, figsize=(11.5, 4.5))

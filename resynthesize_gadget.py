@@ -13,7 +13,9 @@ equivalence to U (up to global phase):
   * Qiskit  transpile(optimization_level = 1,2,3)
   * pytket  FullPeepholeOptimise
 
-Both converge to 14 CNOTs (= 2 x 7, the per-Fredkin optimum), verified equivalent.
+Both FIND 14 CNOTs (= 2 x 7, the per-Fredkin optimum), verified equivalent.  Note:
+this is the count the optimizers produced, NOT a proof that 14 is minimal over the
+full 5-qubit unitary (that would need a lower-bound / exhaustive-synthesis argument).
 ZX-calculus (PyZX) minimizes T-count, not CNOT-count, and does worse here (~27
 CNOTs), so it is not used for this metric.
 
@@ -84,9 +86,9 @@ def main():
     except Exception as e:                          # pragma: no cover
         print(f"\n  pytket unavailable: {e}")
 
-    print("\n  => two independent optimizers agree: 16 -> 14 CNOTs, unitary-preserving.")
-    print("     (2 x 7 = per-Fredkin optimum; the shared control gives no further")
-    print("      CNOT saving at fixed unitary.)")
+    print("\n  => two independent optimizers FIND 16 -> 14 CNOTs, unitary-preserving")
+    print("     (2 x 7 = per-Fredkin optimum). This is the count they produced, not a")
+    print("     proof of minimality over the full 5-qubit unitary.")
 
 
 if __name__ == "__main__":

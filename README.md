@@ -201,14 +201,18 @@ register A, [3,4] = discarded register B):
 Full write-up: **[`SWAP_GADGET_OPTIMIZATION.md`](SWAP_GADGET_OPTIMIZATION.md)**.
 
 - **Same unitary** ([`resynthesize_gadget.py`](resynthesize_gadget.py)): Qiskit and
-  pytket both peephole-reduce the coherent gadget **16 → 14 CNOTs**
-  (verified unitary-equivalent; `= 2×7`, the per-Fredkin optimum).
+  pytket both peephole-reduce the coherent gadget to **14 CNOTs** (verified
+  unitary-equivalent; `= 2×7`, the per-Fredkin optimum — a found count, not a proven
+  minimum).
 - **Same observable** ([`destructive_gadget.py`](destructive_gadget.py)): since PQEC
   needs only `⟨O⟩ = Tr(Oρ²)/Tr(ρ²)`, the **destructive / virtual-distillation**
   measurement (Bell-basis change, no ancilla, no controlled-SWAP) reproduces `⟨O⟩`
-  to `2e-16` (fidelity projector **and** generic Pauli) using only **2 CNOTs** — and
-  its CNOT-noise threshold is **~3–4× higher** than the 16-CNOT controlled-SWAP
-  gadget. (Measurement-only: yields `⟨O⟩`, not a coherent purified state.)
+  to `2e-16` (fidelity projector **and** generic Pauli) using only **2 CNOTs per
+  measurement setting**. Closed form `F_dest = (1+6s²t+9s²t²)/(4(1+3s²t²))`,
+  threshold `ε₂* = 1−1/√(2+2t−3t²)`; its **mean-fidelity** threshold is **~2.7–4.4×
+  higher** than the 16-CNOT controlled-SWAP. (Denominator = 1 Bell setting; a general
+  numerator needs several Pauli settings — so this is a per-setting gate count, not a
+  total-sampling claim. Measurement-only: yields `⟨O⟩`, not a coherent state.)
 
 ![destructive vs controlled-SWAP](destructive_gadget.png)
 
