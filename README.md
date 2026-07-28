@@ -28,8 +28,8 @@ state and the tooling to certify it, before adding the (noisy) purification gadg
 | 3b | **Decomposed** Fredkin (native gates) + realistic noise — operational threshold | **done** |
 | 4a | Unitary-preserving CNOT reduction (16→14, two optimizers, verified) | **done** |
 | 4b | Destructive/VD gadget (2 CNOTs), closed form, ~2.7–4.4× higher threshold | **done** |
-| 5a/5b | Variational (PQC) compiling of the gadget unitary / coherent state — trainability barrier | **done** |
-| 5c | Noise-aware PQC training of the purified observable — threshold vs textbook/4b | **done** |
+| 5a/5b | Variational (PQC) compiling of the gadget unitary / ancilla-`|0⟩` isometry — expressibility/trainability squeeze | **done** |
+| 5c | Noise-aware PQC training of the purified observable — threshold vs textbook/4b (specialized estimator) | **done** |
 
 ## The noisy input state
 
@@ -256,34 +256,48 @@ Full write-up: **[`PQC_APPROX.md`](PQC_APPROX.md)**.
 Step 4 reduced the CNOT count *exactly*. Step 5 asks the *learned* version: can a
 parameterized quantum circuit (PQC) be **trained** to play the gadget's role with
 fewer CNOTs? As in Step 4, "role" has a ladder of meanings, and we did all three —
-reproduce the **unitary** (5a), the **coherent state** on the physical input (5b), or
-just the purified **observable**, noise-aware (5c). The ansatz has a CNOT budget `B`
-as its knob; the same ansatz runs as a fast numpy unitary (5a/5b) and as a noisy
-`default.mixed` circuit (5c), verified identical to machine precision.
+reproduce the **unitary** (5a), the **ancilla-`|0⟩` isometry** on the physical input
+(5b), or just the purified **observable**, noise-aware (5c). The ansatz has a CNOT
+budget `B` as its knob; the same ansatz runs as a fast numpy unitary (5a/5b) and as a
+noisy `default.mixed` circuit (5c), verified identical to machine precision.
 
-**Steps 5a/5b — the trainability barrier.** Trying to compile the gadget *unitary*
-(5a) or *coherent state* (5b) runs straight into barren plateaus. With **exact**
-analytic gradients, many restarts, the plateau-mitigating **LHST** local cost (Khatri
-et al.), and rich ansätze up to **375 params / 24 CNOTs**, the best infidelity floors
-around `δ ≈ 0.44` (5a) / `0.29` (5b) at 16 CNOTs — nowhere near exact, even though 16
-CNOTs *can* represent `U` exactly. So from-scratch variational compiling does **not**
-beat Step 4a. The coherent state (5b) is consistently easier than the unitary (5a) —
-the same relaxation ladder as Step 4, pointing at the observable.
+**Steps 5a/5b — an expressibility/trainability squeeze.** Compiling the gadget
+*unitary* (5a) or *isometry* (5b) from scratch fails: with **exact** analytic
+gradients, many restarts, the plateau-mitigating **LHST** local cost, and rich ansätze
+up to **375 params / 24 CNOTs**, the best infidelity floors around `δ ≈ 0.44` (5a) /
+`0.29` (5b). A **teacher–student** test (`test_inclass.py`) pins down *why* — recompile
+a target that is reachable by construction, and see if the optimizer finds it:
 
-![variational compiling barrier](pqc_compile_pareto.png)
+- `B=12`: reachable targets recompile to `~1e-15` (optimizer is fine), yet `U` is
+  unreached → **expressibility** (this fixed CNOT topology can't hold `U` at 12);
+- `B=20`: even reachable targets fail (`δ≈0.8`) → genuine **barren-plateau/trainability**
+  barrier (`B=16` is the transition).
+
+So where the ansatz is *trainable* it isn't *expressive enough*, and where it might be
+expressive the optimizer can't navigate — a squeeze **specific to this generic ansatz**,
+not a claim that the gadget is uncompilable (a topology-matched ansatz *is* Step 4a). So
+from-scratch variational compiling does **not** beat Step 4a; 5b is consistently easier
+than 5a — the same relaxation ladder as Step 4, pointing at the observable.
+
+![variational compiling squeeze](pqc_compile_pareto.png)
 
 **Step 5c — noise-aware observable training (the useful route).** Relaxing to the
 operational scalar `F(ε)` (matched for `O ∈ {|Φ⁺⟩⟨Φ⁺|, ZZ}`) is a low-dimensional,
-plateau-free target that trains easily at a **small** budget (`B=6`). To keep the
-learned circuit an *honest* gadget we match the ancilla-parity **correlators**
-`⟨Z_a⟩ = Tr(ρ²)` and `⟨Z_a⊗O⟩ = Tr(Oρ²)` (matching only the ratio `F` is degenerate —
-the optimizer can drive the denominator to zero and fake any value). We then compare
-a **noise-free-trained** `θ_free` against a **noise-aware-trained** `θ_aware`
-(depolarizing `ε₂` in the loss).
+plateau-free target that trains easily at a **small** budget (`B=6`). To avoid a
+degeneracy we match the ancilla-parity **correlators** `⟨Z_a⟩ = Tr(ρ²)` and
+`⟨Z_a⊗O⟩ = Tr(Oρ²)` (matching only the ratio `F` lets the optimizer drive the
+denominator to zero and fake any value, even `F > 1`).
+
+**Scope (out-of-sample check).** `θ_free` generalizes across the *input family* —
+over a dense unseen `ε` grid it matches `F_exact` to `0.0014` (`Φ⁺`) / `0.0021` (`ZZ`)
+— but **not across observables**: unseen `XX, YY` are off by `~0.13`. So it is a
+**learned estimator specialized to the Bell-isotropic inputs and `{Φ⁺, ZZ}`**, not a
+general observable-equivalent gadget (Step 4b is exact for all `O`). The threshold
+uses `O = Φ⁺` only and `F(ε₂)` is verified monotone, so the numbers below stand.
 
 **Positive result — fewer CNOTs lift the threshold.** `θ_free` matches `F_exact(ε)` to
 `~0.001` at `B = 6` CNOTs, and deployed under CNOT noise it **beats the 16-CNOT
-textbook** at every input noise, approaching the exact 2-CNOT Step-4b ceiling:
+textbook** at every input noise, approaching the exact 2-CNOT Step-4b reference:
 
 | input `ε` | 0.10 | 0.20 | 0.30 | 0.40 | 0.50 | 0.60 |
 |-----------|------|------|------|------|------|------|
@@ -291,13 +305,16 @@ textbook** at every input noise, approaching the exact 2-CNOT Step-4b ceiling:
 | **PQC `θ_free` (6) `ε₂*`** | **0.051** | **0.100** | **0.148** | **0.194** | **0.236** | **0.273** |
 | Step 4b destructive (2) `ε₂*` | 0.146 | 0.229 | 0.280 | 0.313 | 0.333 | 0.343 |
 
-**Negative result — noise-aware training adds nothing.** Baking the CNOT noise into the
-loss gives **no threshold gain**: matching the ratio `F` is denominator-degenerate,
-and matching the absolute correlators is misaligned with the ratio (and collapses to
-an input-independent solution at strong noise). This is expected — depolarizing is
-**unital**, so its `F`-bias cannot be undone by re-choosing single-qubit rotations.
-**The entire win is structural (fewer CNOTs), exactly as in Step 4** — reinforcing that
-the destructive Step-4b gadget, not a learned one, is the right low-CNOT tool.
+**Negative result — noise-aware training adds nothing (here).** Baking the CNOT noise
+into the loss gives **no threshold gain** for the objectives we tried: matching the
+ratio `F` is denominator-degenerate, and matching the absolute correlators is
+misaligned with the ratio (and collapses to an input-independent solution at strong
+noise). This is consistent with the noise being **unital** (it can't be *inverted* by
+unitary re-parameterization) — but it is an **empirical negative, not a proof of
+impossibility**: other objectives (e.g. a denominator-constrained margin objective) we
+did not try. On this problem **the win is structural (fewer CNOTs), as in Step 4** —
+reinforcing that the destructive Step-4b gadget, not a learned one, is the right
+low-CNOT tool.
 
 ![noise-aware PQC threshold](pqc_noise_aware.png)
 
@@ -326,7 +343,10 @@ the destructive Step-4b gadget, not a learned one, is the right low-CNOT tool.
 | [`pqc_common.py`](pqc_common.py) | Step 5 shared: target `U`, PQC ansatz, fast numpy unitary + **exact** gradients, LHST cost, PennyLane noisy executor, read-out, references (self-test) |
 | [`pqc_compile.py`](pqc_compile.py) | Step 5a/5b: variational compiling sweep (global + LHST costs); figure `pqc_compile_pareto.png` |
 | [`pqc_noise_aware.py`](pqc_noise_aware.py) | Step 5c: noise-aware observable training + threshold comparison; figure `pqc_noise_aware.png` |
-| [`PQC_APPROX.md`](PQC_APPROX.md) | Step 5 write-up: three targets, the LHST derivation, the trainability barrier, and the noise-aware threshold result |
+| [`test_inclass.py`](test_inclass.py) | teacher–student test: in-class recompilation isolating expressibility vs trainability by depth |
+| [`test_5c_oos.py`](test_5c_oos.py) | Step-5c out-of-sample check (unseen observables, dense `ε`, `F(ε₂)` monotonicity) |
+| [`draw_pqc_ansatz.py`](draw_pqc_ansatz.py) | draws the ansatz structure (`circuit_pqc_ansatz.png`) |
+| [`PQC_APPROX.md`](PQC_APPROX.md) | Step 5 write-up: three targets, the LHST derivation, the expressibility/trainability squeeze, and the noise-aware threshold result |
 | [`requirements.txt`](requirements.txt) | Dependencies (pinned minimums + tested versions) |
 
 ## Setup & run

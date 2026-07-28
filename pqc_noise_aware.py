@@ -2,8 +2,9 @@
 Step 5c -- noise-aware variational training of the purified OBSERVABLE.
 ======================================================================
 
-Steps 5a/5b tried to reproduce the gadget UNITARY / coherent STATE and ran into the
-trainability barrier.  Here we relax all the way to the operationally relevant
+Steps 5a/5b tried to reproduce the gadget UNITARY / ancilla-|0> ISOMETRY and failed to
+an expressibility/trainability squeeze.  Here we relax all the way to the operationally
+relevant
 quantity -- the purified observable
 
     F(eps) = Tr(O rho_eps^2) / Tr(rho_eps^2)          (read as <Z_a (x) O>/<Z_a>)
@@ -189,7 +190,7 @@ def run():
     print("\n  Findings:")
     print(f"   * POSITIVE: theta_free (B=6) beats the 16-CNOT textbook at every eps")
     print(f"     ({rows[0][1]:.3f}->{rows[-1][1]:.3f} vs {rows[0][3]:.3f}->{rows[-1][3]:.3f})")
-    print(f"     and approaches the exact 2-CNOT Step-4b ceiling "
+    print(f"     and approaches the exact 2-CNOT Step-4b reference "
           f"({rows[0][4]:.3f}->{rows[-1][4]:.3f}) -- purely the 'fewer noisy CNOTs' effect.")
     print(f"   * NEGATIVE: noise-aware training does NOT help "
           f"(mean threshold change {dgain:+.3f}).")

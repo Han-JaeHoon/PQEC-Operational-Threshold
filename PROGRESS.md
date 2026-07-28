@@ -340,25 +340,35 @@ observable). Shared infra `pqc_common.py` (target `U`, ansatz with CNOT-budget k
 fast numpy unitary + **exact analytic gradients** matched to FD at `1e-11`, LHST cost,
 PennyLane noisy executor, read-out; self-test to `1e-15`).
 
-**Step 5a/5b — trainability barrier (`pqc_compile.py`).** Compiling the gadget
-*unitary* (5a, global HS cost `1−|Tr(U†V)|²/32²`) or *coherent state* (5b, the
-`32×16` ancilla-`|0⟩` block) hits **barren plateaus**. With exact gradients, 16
-restarts, the plateau-mitigating **LHST** local cost (derived in the write-up, matched
-to FD), and rich ansätze up to **375 params / 24 CNOTs**, the best infidelity floors
-at `δ ≈ 0.44` (5a) / `0.29` (5b) at `B=16` — nowhere near exact, though 16 CNOTs *can*
-represent `U`. LHST does not rescue the global fidelity. So from-scratch variational
-compiling does **not** beat Step 4a. 5b < 5a at every budget (same ladder as Step 4).
+**Step 5a/5b — expressibility/trainability squeeze (`pqc_compile.py`).** Compiling the gadget
+*unitary* (5a, global HS cost `1−|Tr(U†V)|²/32²`) or *ancilla-`|0⟩` isometry* (5b, the
+`32×16` block) fails: with exact gradients, 16 restarts, the plateau-mitigating
+**LHST** local cost (derived in the write-up, matched to FD), and rich ansätze up to
+**375 params / 24 CNOTs**, the best infidelity floors at `δ ≈ 0.44` (5a) / `0.29` (5b).
+A **teacher–student** test (`test_inclass.py`) isolates *why* — recompile a target
+reachable by construction, same optimizer:
+
+- `B=12`: reachable targets → `δ ~ 1e-15` (optimizer fine) yet `U` unreached →
+  **expressibility** (fixed topology can't hold `U` at 12);
+- `B=20`: even reachable targets fail (`δ ≈ 0.8`) → genuine **trainability/plateau**
+  barrier (`B=16` transition, 2 of 4).
+
+So it is an **expressibility/trainability squeeze specific to this generic ansatz**,
+not a plain barren plateau and not a claim the gadget is uncompilable (a
+topology-matched ansatz *is* Step 4a). 5b < 5a at every budget (same ladder as Step 4).
 Figure `pqc_compile_pareto.png`.
 
 **Step 5c — noise-aware observable training (`pqc_noise_aware.py`).** Relaxing to the
 scalar `F(ε)` (matched for `O ∈ {Φ⁺, ZZ}`) is plateau-free and trains to `loss ≈ 1e-5`
-at `B=6`. To stay an *honest* gadget we match the **correlators** `⟨Z_a⟩=Tr(ρ²)`,
-`⟨Z_a⊗O⟩=Tr(Oρ²)` (matching only the ratio `F` is denominator-degenerate — the
-optimizer drives `⟨Z_a⟩→0` and fakes `F>1`).
+at `B=6`. To avoid a degeneracy we match the **correlators** `⟨Z_a⟩=Tr(ρ²)`,
+`⟨Z_a⊗O⟩=Tr(Oρ²)` (matching only the ratio `F` lets `⟨Z_a⟩→0` and fakes `F>1`).
 
-- **Positive:** `θ_free` (6 CNOTs) matches `F_exact` to `~0.001` and, under per-CNOT
-  depolarizing, **beats the 16-CNOT textbook** at every `ε`, approaching the exact
-  2-CNOT Step-4b ceiling:
+- **Scope (`test_5c_oos.py`):** `θ_free` generalizes across `ε` (dense unseen grid:
+  `Φ⁺` 0.0014, `ZZ` 0.0021) but **not across observables** (unseen `XX,YY ~0.13`) — a
+  **specialized estimator** (Bell-isotropic inputs, `{Φ⁺,ZZ}`), not a general gadget.
+  `F(ε₂)` is monotone → threshold well-defined.
+- **Positive:** `θ_free` (6 CNOTs), under per-CNOT depolarizing, **beats the 16-CNOT
+  textbook** at every `ε`, approaching the exact 2-CNOT Step-4b **reference**:
 
   | input `ε` | 0.10 | 0.20 | 0.30 | 0.40 | 0.50 | 0.60 |
   |-----------|------|------|------|------|------|------|
@@ -366,16 +376,16 @@ optimizer drives `⟨Z_a⟩→0` and fakes `F>1`).
   | PQC `θ_free` (6) `ε₂*` | 0.051 | 0.100 | 0.148 | 0.194 | 0.236 | 0.273 |
   | Step 4b (2) `ε₂*` | 0.146 | 0.229 | 0.280 | 0.313 | 0.333 | 0.343 |
 
-- **Negative:** noise-aware training gives **no** threshold gain. The ratio objective
-  is degenerate; the absolute-correlator objective is misaligned with `F` and, at
-  strong noise, collapses to an input-independent (constant-`⟨Z_a⟩`) minimum.
-  Depolarizing is **unital** → its `F`-bias is uncompensable by unitary
-  re-parameterization. The threshold win is purely **structural** (fewer CNOTs).
+- **Negative:** noise-aware training gives **no** threshold gain *for the objectives
+  tried* (ratio-matching degenerate; correlator-matching ratio-misaligned / collapses
+  under strong noise). Consistent with the noise being **unital** — an empirical
+  negative, **not** a proof of impossibility (a denominator-constrained margin
+  objective, say, is untried). The threshold win is **structural** (fewer CNOTs).
   Figure `pqc_noise_aware.png`.
 
 **Takeaway:** the learned setting reproduces Step 4's lesson — target the *observable*,
 and the advantage is *structural* (fewer noisy CNOTs / the destructive gadget), not
-something a generic PQC or noise-aware training can add.
+something this generic PQC or the tested noise-aware training can add.
 
 ### Next
 

@@ -14,13 +14,15 @@ to reproduce the gadget U = H_a CSWAP CSWAP H_a in two senses, and sweep B:
 Both use EXACT analytic gradients (pqc_common._cost_grad) with many L-BFGS restarts.
 
 What this script demonstrates (see PQC_APPROX.md for the discussion):
-  * Variational compiling of this gadget hits the well-known TRAINABILITY BARRIER
-    (barren plateaus / hard landscape).  The infidelity delta floors around ~0.3-0.5
-    and does NOT reach 0, even though B=16 CNOTs is enough to represent U exactly
-    (the textbook decomposition uses 16).  We also ran the plateau-mitigating LHST
-    LOCAL cost (Khatri et al.) and rich ansaetze up to 375 params / 24 CNOTs -- the
-    barrier persists (delta ~ 0.5).  So from-scratch variational compiling does NOT
-    beat the structured Step-4a decomposition.
+  * Variational compiling of this gadget with a generic fixed-topology ansatz does NOT
+    reach U: the infidelity delta floors around ~0.3-0.5 even with the LHST local cost
+    (Khatri et al.) and rich ansaetze up to 375 params / 24 CNOTs.  The teacher-student
+    test (test_inclass.py) shows the cause is an EXPRESSIBILITY / TRAINABILITY SQUEEZE:
+    at B=12 the optimizer recompiles reachable targets to 1e-15 (so U's failure is
+    expressibility), while by B=20 it fails even on reachable targets (a genuine
+    trainability/plateau barrier).  Either way from-scratch compiling does NOT beat the
+    structured Step-4a decomposition -- but this is ansatz-specific, not a claim that U
+    is uncompilable.
   * The COHERENT-state target (5b) is consistently EASIER than the full unitary (5a)
     -- lower delta at every budget -- because it need only match the 16 physical
     (ancilla-|0>) columns.  This is the same relaxation ladder as Step 4:
@@ -106,11 +108,12 @@ def run(restarts=16):
     best5al = min(res["5a_lhst"][B] for B in BUDGETS)
     print(f"   * best full-unitary infidelity over the sweep (5a, global cost): {best5a:.2e}")
     print(f"   * best full-unitary infidelity with the LHST local cost:         {best5al:.2e}")
-    print(f"   * best coherent-state infidelity (5b):                           {best5b:.2e}")
+    print(f"   * best anc-|0> isometry infidelity (5b):                          {best5b:.2e}")
     lower = all(res["5b"][B][0] <= res["5a"][B][0] + 1e-9 for B in BUDGETS)
-    print(f"   * 5b (coherent) <= 5a (unitary) at every budget: {lower}")
-    print("   * None reaches a useful accuracy (delta -> 0): the trainability barrier")
-    print("     dominates, so from-scratch PQC compiling does NOT beat Step-4a's 14 CNOTs.")
+    print(f"   * 5b (isometry) <= 5a (unitary) at every budget: {lower}")
+    print("   * None reaches a useful accuracy (delta -> 0); the teacher-student test")
+    print("     (test_inclass.py) shows an expressibility/trainability squeeze, so")
+    print("     from-scratch PQC compiling does NOT beat Step-4a's 14 CNOTs.")
     print("   * The relaxation ladder unitary(5a) > state(5b) > observable(5c) in")
     print("     difficulty mirrors Step 4 and points to targeting the observable (5c).")
 
@@ -123,12 +126,12 @@ def run(restarts=16):
     ax.plot(BUDGETS, [res["5a_lhst"][B] for B in BUDGETS], "--^", color="C3",
             label="5a: full unitary (LHST local cost)")
     ax.plot(BUDGETS, [res["5b"][B][0] for B in BUDGETS], "-s", color="C1",
-            label="5b: coherent state (anc-|0>)")
+            label="5b: anc-|0> isometry (anc-|0>)")
     ax.axvline(16, color="0.6", ls=":", lw=1)
     ax.text(16.1, 0.05, "16 = exact\n(textbook)", fontsize=8, va="bottom")
     ax.set_xlabel("CNOT budget  B")
     ax.set_ylabel(r"approximation infidelity  $\delta = 1-$fidelity")
-    ax.set_title("(a) Variational compiling hits the trainability barrier")
+    ax.set_title("(a) Variational compiling does not reach U (expressibility/trainability squeeze)")
     ax.set_ylim(0, None)
     ax.legend(frameon=False, fontsize=8.5)
 
@@ -136,7 +139,7 @@ def run(restarts=16):
     ax.semilogy(BUDGETS, [max(res["5a"][B][1], 1e-16) for B in BUDGETS], "-o",
                 color="C0", label="5a: full unitary")
     ax.semilogy(BUDGETS, [max(res["5b"][B][1], 1e-16) for B in BUDGETS], "-s",
-                color="C1", label="5b: coherent state")
+                color="C1", label="5b: anc-|0> isometry")
     ax.set_xlabel("CNOT budget  B")
     ax.set_ylabel(r"worst $|F_{PQC}-F_{exact}|$ over $\varepsilon$")
     ax.set_title("(b) Operational error stays large (compiling failed)")

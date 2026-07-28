@@ -363,7 +363,7 @@ def cost_grad_unitary(ops, params):
 
 
 # --- Local Hilbert-Schmidt-Test (LHST) cost for Step 5a ---------------------
-# The global cost 1-|Tr(U^dag V)|^2/d^2 has barren plateaus; LHST (Khatri et al.,
+# The global cost 1-|Tr(U^dag V)|^2/d^2 is prone to barren plateaus; LHST (Khatri et al.,
 # Quantum 3, 140 (2019)) replaces the global Bell overlap of the Choi state of
 # W = V^dag U by an average of per-qubit Bell overlaps.  Closed operator form
 # (derived in PQC_APPROX.md):
