@@ -9,8 +9,8 @@ Three circuit diagrams for the CNOT-only noise model (single-qubit gates ideal).
                                         (single-qubit gates left ideal)
 
 Uses the textbook decomposition CSWAP(c;x,y) = CNOT(x->y) . Toffoli(c,y;x) .
-CNOT(x->y) with the Clifford+T Toffoli (8 CNOTs per Fredkin).  Reuses _fredkin from
-pqec_decomposed_noise.py with p1=0 (no single-qubit noise); p2 turns on the
+CNOT(x->y) with the Clifford+T Toffoli (8 CNOTs per Fredkin).  Reuses the CNOT-only
+_fred from verify_analytic_decomposed.py (single-qubit gates ideal); p2 turns on the
 two-qubit depolarizing after each CNOT.
 
 Run:  python draw_cnot_noise.py
@@ -21,7 +21,7 @@ import matplotlib.pyplot as plt
 import pennylane as qml
 
 from noisy_bell_state import make_noisy_bell
-from pqec_decomposed_noise import _fredkin
+from verify_analytic_decomposed import _fred
 
 P2 = 0.10  # shown so the two-qubit depolarizing boxes are visible
 
@@ -32,7 +32,7 @@ _dev5 = qml.device("default.mixed", wires=5)
 # 1) single decomposed CSWAP (no noise) --------------------------------------
 @qml.qnode(_dev3)
 def _cswap_decomp():
-    _fredkin(0, 1, 2, 0.0, 0.0)          # control 0; swap 1,2; ideal
+    _fred(0, 1, 2, 0.0)          # control 0; swap 1,2; ideal
     return qml.expval(qml.PauliZ(0))
 
 
@@ -50,9 +50,9 @@ def _swaptest_decomp(rho_AB):
     qml.QubitDensityMatrix(rho_AB, wires=[1, 2, 3, 4])
     qml.Hadamard(0)                      # ancilla -> |+>  (state prep)
     _bar()
-    _fredkin(0, 1, 3, 0.0, 0.0)          # CSWAP(a; A1,B1)
+    _fred(0, 1, 3, 0.0)          # CSWAP(a; A1,B1)
     _bar()
-    _fredkin(0, 2, 4, 0.0, 0.0)          # CSWAP(a; A2,B2)
+    _fred(0, 2, 4, 0.0)          # CSWAP(a; A2,B2)
     _bar()
     qml.Hadamard(0)                      # final Hadamard
     return qml.expval(qml.PauliZ(0))
@@ -64,9 +64,9 @@ def _swaptest_cnot_noise(rho_AB, p2):
     qml.QubitDensityMatrix(rho_AB, wires=[1, 2, 3, 4])
     qml.Hadamard(0)                      # ancilla -> |+>  (state prep)
     _bar()
-    _fredkin(0, 1, 3, 0.0, p2)           # single-qubit gates ideal (p1=0),
+    _fred(0, 1, 3, p2)           # single-qubit gates ideal (p1=0),
     _bar()
-    _fredkin(0, 2, 4, 0.0, p2)           # 2-qubit depol after each CNOT
+    _fred(0, 2, 4, p2)           # 2-qubit depol after each CNOT
     _bar()
     qml.Hadamard(0)                      # final Hadamard
     return qml.expval(qml.PauliZ(0))

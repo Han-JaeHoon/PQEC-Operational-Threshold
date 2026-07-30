@@ -34,7 +34,8 @@ analysis** (Part I) from the **numerical implementation and verification**
 |--------|------------|
 | `q ≡ ε₂` | per-CNOT **two-qubit replacement depolarizing** strength: `D_q(σ) = (1−q)σ + q·I₄/4` (q = replacement probability) |
 | `s ≡ v` | **survival factor** `s = 1−q = 1−ε₂`; on a noisy CNOT pair every non-identity Pauli component is scaled by `s` (`v` is the same quantity used in the code) |
-| `u` | single-qubit survival `u = 1−ε₁`; **here `ε₁ = 0`, so `u = 1`** (single-qubit gates ideal) |
+
+Single-qubit gates (`H, T, T†`, and the two ancilla Hadamards) are **ideal** throughout.
 
 **Derived / output quantities:**
 
@@ -176,12 +177,10 @@ N_shot(t,q)/N_shot(t,0) ~ [Q(t,0)/Q(t,q)]² = s⁻²⁰ [ (1 + 3 t²)/(1 + 3 s�
 
 ### II.1 Circuit (genuine PennyLane `default.mixed`)
 
-- `pqec_decomposed_noise.py` — native gates: `_cnot` (CNOT + 2-qubit depol `p2`),
-  `_g1` (1-qubit gate + optional 1-qubit depol `p1`), the Clifford+T `_toffoli`,
-  and `_fredkin(q,a,b)` = `CNOT(b→a)·Toffoli(q,a;b)·CNOT(b→a)`.
-- **CNOT-only** = call with `p1 = 0` (single-qubit gates ideal). The full gadget:
-  `QubitDensityMatrix → H_a → _fredkin → _fredkin → H_a`, reading
-  `(⟨Z_a⊗Φ_A⟩, ⟨Z_a⊗I_A⟩)`.
+- `verify_analytic_decomposed.py` — native gates: `_c2` (CNOT + 2-qubit depol `e2`),
+  the Clifford+T `_tof` (single-qubit gates ideal), and `_fred(q,a,b,e2)` =
+  `CNOT(b→a)·Toffoli(q,a;b)·CNOT(b→a)`. The full gadget:
+  `QubitDensityMatrix → H_a → _fred → _fred → H_a`, reading `(⟨Z_a⊗Φ_A⟩, ⟨Z_a⊗I_A⟩)`.
 - `pqec_cnot_threshold.py` — the analytic closed forms `F_dec`, `Q_denom`, `N_num`,
   `c_perp`, `c_z`, the threshold `eps2_star`, `eff_correlators_circuit`, and the
   figure.
@@ -196,15 +195,13 @@ K_I = √(1 − 15 ε₂/16) · I ,     K_P = √(ε₂/16) · P   (15 non-ident
 
 which is exactly `D_q(σ) = (1−ε₂)σ + ε₂ I₄/4`, i.e. **ε₂ is the replacement
 probability** — the same convention as the 3-qubit global-depolarizing channel of
-Step 3a. (Single-qubit gates are ideal here, so the separate 1-qubit convention
-`ε₁ = 4p₁/3` is irrelevant.)
+Step 3a.
 
 ### II.3 Verification (circuit vs Part I), all to `~1e-14`
 
 | quantity | check |
 |----------|-------|
 | `F_PQEC` | circuit `= ¼[1 + s⁵(1+5s)t(1+t)/(1+3s⁴t²)]` |
-| orientation | retain `=` discard (single-qubit ideal ⇒ orientation-independent) |
 | `Q`, `N_Φ` | match `s¹⁰/4(1+3s⁴t²)` and `s¹⁰/16[…]` |
 | `c_⊥, c_z` | match; `c_z − c_⊥ > 0` for `q>0`, `= 0` for `q=0` |
 
@@ -236,6 +233,6 @@ CSWAP still yields a net fidelity gain. Figure: `pqec_cnot_threshold.png`.
 
 ```bash
 python pqec_cnot_threshold.py       # closed forms, threshold table, anisotropy check, figure
-python verify_analytic_decomposed.py  # A/B/F_dec + orientation + slopes vs circuit
+python verify_analytic_decomposed.py  # A/B/F_dec + K2 slope vs circuit
 python draw_cnot_noise.py           # the three circuit diagrams
 ```

@@ -25,7 +25,7 @@ state and the tooling to certify it, before adding the (noisy) purification gadg
 | 1 | Noisy input state `ρ_ε` — genuine preparation circuit + verification | **done** |
 | 2 | Purification (SWAP-test) gadget — ideal, verified on `ρ_ε` | **done** |
 | 3a | Fredkin **global** depolarizing — analytic benchmark (no threshold) | **done** |
-| 3b | **Decomposed** Fredkin (native gates) + realistic noise — operational threshold | **done** |
+| 3b | **Decomposed** Fredkin, **CNOT-only** noise — operational threshold `ε₂*` | **done** |
 | 4a | Unitary-preserving CNOT reduction (16→14, verified) + CNOT-noise threshold (1.25–1.42× over 16-CNOT) | **done** |
 | 4b | Destructive/VD gadget (2 CNOTs), closed form, ~2.7–4.4× higher threshold | **done** |
 | 5a/5b | Variational (PQC) compiling of the gadget unitary / ancilla-`|0⟩` isometry — expressibility/trainability squeeze | **done** |
@@ -106,69 +106,37 @@ step-by-step by the circuit to `~1e-16` in `verify_note_states.py`.
 ![global-depol benchmark](global_depol_benchmark.png)
 
 A real operational threshold needs noise that attenuates numerator and denominator
-**asymmetrically** (e.g. per-native-gate noise on a decomposed Fredkin) — that is
+**asymmetrically** (e.g. noise on the CNOTs of a decomposed Fredkin) — that is
 Step 3b.
 
-## Realistic gate noise on a decomposed Fredkin (Step 3b)
-
-Decompose each Fredkin into native 1- and 2-qubit gates and put realistic
-depolarizing noise on **each native gate**. Representative decompositions:
-
-- **textbook** `CSWAP(q;a,b) = CNOT(b→a)·Toffoli(q,a;b)·CNOT(b→a)`, Toffoli = the
-  Clifford+T circuit (Nielsen & Chuang): 6 CNOT + T/H, so **1 Fredkin = 8 CNOTs**;
-- **optimum** 5 two-qubit gates (Smolin & DiVincenzo, PRA 53, 2855 (1996));
-- **recent** connectivity-aware low-CNOT counts (arXiv:2305.18128).
-
-Noise: 2-qubit depolarizing `p2` after each CNOT, 1-qubit `p1` after each
-single-qubit gate (`p1 = p2/10`). Sanity: `p1=p2=0` reproduces the ideal gadget to
-`6.7e-16` (the decomposition is exact).
-
-**Result: a finite operational threshold `p2*` appears.** Native-gate noise hits
-the data qubits asymmetrically, so it does **not** cancel in the ratio —
-`⟨O⟩_PQEC` falls with `p2` and crosses the no-QEC baseline at `p2* ≈ 0.05–0.12`
-(growing with input noise). That is **far above realistic hardware 2-qubit errors**
-(`~10⁻³–10⁻²`), so one PQEC round comfortably tolerates realistic gate noise.
-
-**Exact analytic result** (verified on the circuit to `~1e-14`), with `u=1−ε₁`,
-`v=1−ε₂`, `D=1+(1+2u⁴)v⁴t²`, and `F_dec = ¼[1 + t(1+t)C/D]`:
-
-```
-B = (u⁹v¹⁰/4)D,   A = (u⁹v¹⁰/16)[D + t(1+t)C]
-C_retain (u,v) = 2u⁴v⁶ + u⁶v⁵ + 3u⁶v⁶       (K₁ → 5/2 at t=1)
-C_discard(u,v) =  u⁶v⁵ + (1+u²+2u⁶+u⁸)v⁶     (K₁ → 2   at t=1)
-```
-
-Input `t = 1−ε` (global Bell-depolarizing input `ρ_ε`) or `(1−4p/3)²` (local
-depolarizing `p` per Bell qubit) — same isotropic family. Conventions: `ε₂ = p₂`,
-`ε₁ = 4p₁/3`.
-
-**Orientation matters.** The Toffoli target leg carries the H/T/T† gates, so it
-absorbs most single-qubit noise. Putting that target on the **discarded** register
-shields the kept register (`C_discard`, `K₁ = 2`); putting it on the **retained**
-register does not (`C_retain`, `K₁ = 5/2`). The denominator `B`, the CNOT slope
-`K₂ = 17/8`, and the `ε₂` threshold are **orientation-independent**. So a protocol
-should orient each Fredkin with its Toffoli target on the register it discards.
-
-![decomposed-Fredkin threshold](pqec_decomposed_threshold.png)
-
-### CNOT-only noise (single-qubit gates ideal)
+## CNOT noise on a decomposed Fredkin (Step 3b)
 
 > Full write-up with variable definitions and the theory/implementation split:
 > **[`CNOT_NOISE_ANALYSIS.md`](CNOT_NOISE_ANALYSIS.md)**.
 
-For the operational-threshold study we focus on the case where **only the CNOTs
-are noisy** (a two-qubit depolarizing `ε₂` after each CNOT) and the single-qubit
-gates are ideal (`ε₁ = 0`, `u = 1`). Then the two orientation-dependent numerators
-**coincide**,
+We **assume the CNOTs are the noisy operations and the single-qubit gates are ideal.**
+Decompose each Fredkin into native gates — textbook
+`CSWAP(q;a,b) = CNOT(b→a)·Toffoli(q,a;b)·CNOT(b→a)` with the Clifford+T Toffoli
+(6 CNOT), so **1 Fredkin = 8 CNOTs** and **16 CNOTs** per round — and put a two-qubit
+depolarizing `ε₂` (replacement, `(1−ε₂)ρ + ε₂ I/4`) after each CNOT. Sanity: `ε₂=0`
+reproduces the ideal gadget to `~1e-15`. (Optimized decompositions — 5 two-qubit gates
+Smolin–DiVincenzo PRA 53, 2855 (1996); 7-CNOT Cruz–Murta arXiv:2305.18128 — are a
+possible follow-up under the same model.)
+
+**Result: a finite operational threshold `ε₂*` appears.** Unlike the 3-qubit global
+depolarizing of Step 3a (which cancels in the ratio), CNOT noise attenuates the parity
+numerator and denominator by **different** `t`-dependent factors, so `F` falls with
+`ε₂` and crosses the no-QEC baseline at a finite `ε₂*`. Exact closed form (verified on
+the circuit to `~1e-14`), with `v = 1−ε₂` and `t = 1−ε`:
 
 ```
-C_retain(1,v) = C_discard(1,v) = v⁵ + 5v⁶ ,   v = 1−ε₂ ,
+F_dec = ¼[ 1 + t(1+t)(v⁵+5v⁶)/(1+3v⁴t²) ] ,   numerator C(v)=v⁵+5v⁶ ,  D(v,t)=1+3v⁴t² .
 ```
 
-so the result is **orientation-independent** — the earlier orientation split was
-entirely a single-qubit-noise effect. The purified fidelity is
-`F_dec = ¼[1 + t(1+t)(v⁵+5v⁶)/(1+3v⁴t²)]`, and the CNOT-only threshold `ε₂*`
-(general 8-CNOT decomposition) is:
+Input `t = 1−ε` (global Bell-depolarizing input `ρ_ε`) or `(1−4p/3)²` (local
+depolarizing `p` per Bell qubit) — same isotropic family. A noisy CNOT also turns the
+isotropic input into an **anisotropic** Bell-diagonal effective state (`c_z > c_⊥`).
+The CNOT-only threshold `ε₂*`:
 
 | input `ε` | 0.10 | 0.20 | 0.30 | 0.40 | 0.50 | 0.60 |
 |-----------|------|------|------|------|------|------|
@@ -353,9 +321,7 @@ low-CNOT tool.
 | [`verify_analytic_global_depol.py`](verify_analytic_global_depol.py) | Verifies the analytic global-depol formulas against the circuit (`~1e-13`) |
 | [`verify_note_states.py`](verify_note_states.py) | Reproduces the note's step-by-step states (`σ₀…σ_out`) on the circuit (`~1e-16`) |
 | [`plot_global_depol_benchmark.py`](plot_global_depol_benchmark.py) | `F_PQEC` flatness + sampling divergence figure (`global_depol_benchmark.png`) |
-| [`pqec_decomposed_noise.py`](pqec_decomposed_noise.py) | **Decomposed** Fredkin (CNOT+Toffoli) with per-native-gate depolarizing; finite threshold `p2*`, both orientations, scan + figure |
-| [`verify_analytic_decomposed.py`](verify_analytic_decomposed.py) | Verifies the analytic `A/B/F_dec` (retain orientation) against the circuit (`~1e-14`); shows `B`/`K₂` orientation-independent, `K₁` not |
-| [`draw_decomposed.py`](draw_decomposed.py) | Draws one decomposed Fredkin and the full decomposed gadget (`circuit_decomposed_*.png`) |
+| [`verify_analytic_decomposed.py`](verify_analytic_decomposed.py) | Verifies the CNOT-only analytic `A/B/F_dec` and the `K₂` slope against the genuine decomposed circuit (`~1e-14`) |
 | [`draw_cnot_noise.py`](draw_cnot_noise.py) | Draws the CNOT-only diagrams: CSWAP decomposition, SWAP test, and SWAP test with 2-qubit depol after each CNOT (barrier-separated stages) |
 | [`pqec_cnot_threshold.py`](pqec_cnot_threshold.py) | CNOT-only threshold `ε₂*` (single-qubit gates ideal): closed forms (`F`, `Q`, `N_Φ`, `c_⊥`, `c_z`), circuit checks incl. effective-state anisotropy, threshold table + figure |
 | [`CNOT_NOISE_ANALYSIS.md`](CNOT_NOISE_ANALYSIS.md) | Full CNOT-only note: notation/variable definitions, theory (Part I), implementation & verification (Part II) |
@@ -389,9 +355,7 @@ python draw_gadget_noise.py        # Step 3a gadget circuit diagram
 python verify_analytic_global_depol.py  # analytic formulas vs circuit (~1e-13)
 python verify_note_states.py       # note's step-by-step states vs circuit (~1e-16)
 python plot_global_depol_benchmark.py   # F_PQEC flatness + sampling divergence figure
-python pqec_decomposed_noise.py    # decomposed Fredkin + gate noise: threshold p2* (both orientations)
-python verify_analytic_decomposed.py  # analytic A/B/F_dec vs circuit; orientation effect
-python draw_decomposed.py          # decomposed Fredkin + full gadget circuit diagrams
+python verify_analytic_decomposed.py  # CNOT-only analytic A/B/F_dec + K2 slope vs circuit
 python draw_cnot_noise.py          # CNOT-only diagrams (CSWAP decomp, SWAP test, +CNOT noise)
 python pqec_cnot_threshold.py      # CNOT-only threshold eps2* (single-qubit gates ideal)
 python destructive_gadget.py       # 2-CNOT destructive/VD gadget: equivalence + threshold vs cSWAP

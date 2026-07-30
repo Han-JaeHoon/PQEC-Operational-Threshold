@@ -4,12 +4,11 @@ CNOT-only noise threshold for decomposed-Fredkin PQEC (single-qubit gates ideal)
 
 Model: the textbook decomposition (8 CNOTs per Fredkin, two Fredkins = 16 CNOTs);
 single-qubit gates are IDEAL and a two-qubit depolarizing channel of strength
-eps2 acts after EACH CNOT.  With u = 1-eps1 = 1 (ideal single-qubit gates), the
-two orientation numerators coincide,
+eps2 acts after EACH CNOT.  With v = 1 - eps2 and numerator
 
-    C(1, v) = v^5 + 5 v^6,     v = 1 - eps2,
+    C(v) = v^5 + 5 v^6,
 
-so the purified Bell fidelity is orientation-independent:
+the purified Bell fidelity is
 
     F_dec(eps2, t) = 1/4 [ 1 + t(1+t)(v^5 + 5 v^6) / (1 + 3 v^4 t^2) ],
     F_bare(t)      = (1 + 3 t) / 4,     t = 1 - eps  (global Bell-depol input).
@@ -73,7 +72,7 @@ def c_z(t, eps2):
 
 def eff_correlators_circuit(t, eps2):
     """Effective-state correlators (c_perp from XX, c_z from ZZ) from the genuine
-    CNOT-only circuit (single-qubit gates ideal, discard orientation)."""
+    CNOT-only circuit (single-qubit gates ideal)."""
     p = _eps_to_local_p(1 - t)                       # t = 1-eps  ->  local p
     rho = np.kron(_bell_local_p(p), _bell_local_p(p))
 
@@ -81,8 +80,8 @@ def eff_correlators_circuit(t, eps2):
     def run(O):
         qml.QubitDensityMatrix(rho, wires=[1, 2, 3, 4])
         qml.Hadamard(0)
-        _fred(0, 1, 3, 0.0, eps2)                     # Toffoli target on discarded B
-        _fred(0, 2, 4, 0.0, eps2)
+        _fred(0, 1, 3, eps2)                          # Toffoli target on discarded B
+        _fred(0, 2, 4, eps2)
         qml.Hadamard(0)
         return qml.expval(qml.PauliZ(0) @ O) if O is not None \
             else qml.expval(qml.PauliZ(0))
@@ -117,19 +116,16 @@ def main():
     print(" CNOT-only noise threshold (single-qubit gates ideal)")
     print("=" * 74)
 
-    # (0) analytic vs genuine circuit, and orientation-independence
-    print("\n (0) analytic F_dec vs circuit (e1=0), and retain==discard:")
-    worst = worst_or = 0.0
+    # (0) analytic vs genuine circuit
+    print("\n (0) analytic F_dec vs circuit (single-qubit gates ideal):")
+    worst = 0.0
     for eps in [0.2, 0.4, 0.6]:
         t = 1 - eps
         p = _eps_to_local_p(eps)
         for e2 in [0.05, 0.12, 0.20]:
-            fr = (lambda z: z[0] / z[1])(circuit_AB(p, 0.0, e2, "retain"))
-            fd = (lambda z: z[0] / z[1])(circuit_AB(p, 0.0, e2, "discard"))
-            worst = max(worst, abs(fr - F_dec(e2, t)))
-            worst_or = max(worst_or, abs(fr - fd))
-    print(f"     max|circuit - analytic| = {worst:.2e}   "
-          f"max|retain - discard| = {worst_or:.2e}")
+            zO, zI = circuit_AB(p, e2)
+            worst = max(worst, abs(zO / zI - F_dec(e2, t)))
+    print(f"     max|circuit - analytic| = {worst:.2e}")
 
     # (1) threshold table
     print("\n (1) CNOT-noise threshold eps2* vs input noise eps (t = 1-eps):")
@@ -141,7 +137,7 @@ def main():
     print("     (16 = total CNOT count; 16*eps2* is a rough per-round CNOT budget.)")
 
     # (2) small-eps2 behaviour
-    print("\n (2) near eps2=0:  d F_dec / d eps2 |_0  (= -K2, orientation-independent)")
+    print("\n (2) near eps2=0:  d F_dec / d eps2 |_0  (= -K2, the CNOT slope)")
     for eps in [0.2, 0.4, 0.6]:
         t = 1 - eps
         h = 1e-6
