@@ -28,7 +28,8 @@ state and the tooling to certify it, before adding the (noisy) purification gadg
 | 3b | **Decomposed** Fredkin, **CNOT-only** noise — operational threshold `ε₂*` | **done** |
 | 4a | Unitary-preserving CNOT reduction (16→14, verified) + CNOT-noise threshold (1.25–1.42× over 16-CNOT) | **done** |
 | 4b | Destructive/VD gadget (2 CNOTs), closed form, ~2.7–4.4× higher threshold | **done** |
-| 5a/5b | Variational (PQC) compiling of the gadget unitary / ancilla-`|0⟩` isometry — expressibility/trainability squeeze | **done** |
+| 5a | Variational (PQC) compiling of the gadget unitary — **exact at 18 CNOTs** (gadget-matched RX-RY-RZ ansatz); prunes to **14** (=Step 4a; 13 impossible); learned 14-CNOT threshold **~1.5–1.9× Step 4a** | **done** |
+| 5b | Ancilla-`\|0⟩` isometry compiling — easier than 5a; earlier generic ansätze hit an expressibility/trainability squeeze | **done** |
 | 5c | Noise-aware PQC training of the purified observable — threshold vs textbook/4b (specialized estimator) | **done** |
 
 ## The noisy input state
@@ -264,12 +265,45 @@ a target that is reachable by construction, and see if the optimizer finds it:
   barrier (`B=16` is the transition).
 
 So where the ansatz is *trainable* it isn't *expressive enough*, and where it might be
-expressive the optimizer can't navigate — a squeeze **specific to this generic ansatz**,
-not a claim that the gadget is uncompilable (a topology-matched ansatz *is* Step 4a). So
-from-scratch variational compiling does **not** beat Step 4a; 5b is consistently easier
-than 5a — the same relaxation ladder as Step 4, pointing at the observable.
+expressive the optimizer can't navigate — a squeeze **specific to these generic
+ansätze**. Crucially this is an ansatz limitation, **not** a claim the gadget is
+uncompilable — with the right ansatz it *does* compile (next). 5b is consistently
+easier than 5a — the same relaxation ladder as Step 4.
 
 ![variational compiling squeeze](pqc_compile_pareto.png)
+
+**Step 5a — it CAN be done with the right ansatz** ([`pqc_ring_ansatz.py`](pqc_ring_ansatz.py)).
+The obstruction above was the ansatz. Fixing three things makes an RX-RY-RZ PQC compile
+`U` to machine precision:
+1. **gadget-matched connectivity** `(0,1)(0,3)(1,3)(0,2)(0,4)(2,4)` — ancilla to both
+   registers + the swap pairs (a linear chain `0-1-2-3-4` cannot express `U` even at
+   20 CNOTs; the teacher–student test shows this is expressibility);
+2. a **full RX,RY,RZ layer after *every* CNOT** (not just between blocks);
+3. enough depth: `L=1` (6 CNOT) `δ=0.86`, `L=2` (12) `0.44`, **`L=3` (18) `δ≈3e-15` — exact.**
+
+**Pruning to 14** ([`pqc_ring_prune.py`](pqc_ring_prune.py)). Greedily removing CNOTs
+from the exact 18-CNOT solution (warm-started) reaches **14 CNOTs, still exact** — the
+*same* count as Step 4a and the `2×7` per-Fredkin optimum. **13 is unreachable**: every
+single removal leaves `δ ≥ 0.15` ([`reach13.py`](reach13.py)). So learn-then-prune and
+peephole optimization independently converge to 14.
+
+**The arrangement — not the count — sets the noise threshold**
+([`pqc_ring_threshold.py`](pqc_ring_threshold.py)). Putting `ε₂` on each of the learned
+14 CNOTs (single-qubit gates ideal) gives a threshold **~1.5–1.9× higher than Step 4a's
+14-CNOT circuit**, nearly reaching the 2-CNOT destructive gadget at high input noise —
+even though both are exact 14-CNOT realizations of the same `U`:
+
+| input `ε` | textbook (16) | Step 4a (14) | **learned (14)** | dest (2) |
+|-----------|:---:|:---:|:---:|:---:|
+| 0.10 | 0.033 | 0.041 | **0.060** | 0.146 |
+| 0.40 | 0.103 | 0.140 | **0.237** | 0.313 |
+| 0.60 | 0.126 | 0.178 | **0.338** | 0.343 |
+
+![learned 14-CNOT threshold](pqc_ring_threshold.png)
+
+So CNOT **count alone does not set the operational threshold — the arrangement does**,
+with ~2× of room at fixed count. (The robustness is emergent: the circuit was trained
+and pruned noise-free.)
 
 **Step 5c — noise-aware observable training (the useful route).** Relaxing to the
 operational scalar `F(ε)` (matched for `O ∈ {|Φ⁺⟩⟨Φ⁺|, ZZ}`) is a low-dimensional,
@@ -335,6 +369,10 @@ low-CNOT tool.
 | [`pqc_noise_aware.py`](pqc_noise_aware.py) | Step 5c: noise-aware observable training + threshold comparison; figure `pqc_noise_aware.png` |
 | [`test_inclass.py`](test_inclass.py) | teacher–student test: in-class recompilation isolating expressibility vs trainability by depth |
 | [`test_5c_oos.py`](test_5c_oos.py) | Step-5c out-of-sample check (unseen observables, dense `ε`, `F(ε₂)` monotonicity) |
+| [`pqc_ring_ansatz.py`](pqc_ring_ansatz.py) | Step 5a **success**: RX-RY-RZ ansätze; the gadget-matched, per-CNOT-rotation ansatz that compiles `U` exactly at 18 CNOTs; saves `pqc_ring_L3_params.npy` |
+| [`pqc_ring_prune.py`](pqc_ring_prune.py) | Greedy CNOT pruning of the 18-CNOT solution → **14** (exact); saves `pqc_ring_pruned_*.{npy,json}` |
+| [`reach13.py`](reach13.py) | Rigorous test that **13 CNOTs is unreachable** (14 is the floor here) |
+| [`pqc_ring_threshold.py`](pqc_ring_threshold.py) | CNOT-noise threshold of the learned 14-CNOT gadget vs Step 4a/textbook/4b (`pqc_ring_threshold.png`) |
 | [`draw_pqc_ansatz.py`](draw_pqc_ansatz.py) | draws the ansatz structure (`circuit_pqc_ansatz.png`) |
 | [`PQC_APPROX.md`](PQC_APPROX.md) | Step 5 write-up: three targets, the LHST derivation, the expressibility/trainability squeeze, and the noise-aware threshold result |
 | [`requirements.txt`](requirements.txt) | Dependencies (pinned minimums + tested versions) |

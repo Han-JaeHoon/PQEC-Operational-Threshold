@@ -331,6 +331,50 @@ at `B=6`. To avoid a degeneracy we match the **correlators** `⟨Z_a⟩=Tr(ρ²)
 and the advantage is *structural* (fewer noisy CNOTs / the destructive gadget), not
 something this generic PQC or the tested noise-aware training can add.
 
+---
+
+## 2026-07-30 — Step 5a SOLVED: gadget-matched PQC compiles U; prune to 14
+
+The earlier "generic PQC cannot compile the gadget" reading was an **ansatz**
+limitation, not a property of the gadget. A dedicated RX-RY-RZ ansatz study
+(`pqc_ring_ansatz.py`, exact analytic gradients + teacher–student diagnostic) resolves
+it:
+
+- **Connectivity is the key knob.** A linear chain `0-1-2-3-4` cannot express `U` even
+  at 20 CNOTs (in-class targets solve to `1e-15`, `U` stays at `δ≈0.6` → expressibility).
+  Gadget-matched `GADGET_PAIRS = (0,1)(0,3)(1,3)(0,2)(0,4)(2,4)` (ancilla↔both registers
+  + swap pairs) is what `U` needs.
+- **Rotation placement.** A full RX,RY,RZ layer after *every* CNOT (`ansatz_percnot`),
+  not just between blocks, is what makes `U` representable at practical depth.
+- **Compilation succeeds:** `ansatz_percnot(GADGET_PAIRS, L)` gives `δ(U)` = 0.86 (L=1,
+  6 CNOT) → 0.44 (L=2, 12) → **≈3e-15 (L=3, 18 CNOT, exact)**. Best params saved to
+  `pqc_ring_L3_params.npy` (found in ~15% of restarts; barren-plateau onset but the
+  structured `U` is reachable).
+
+**Pruning (`pqc_ring_prune.py`).** Greedily removing CNOTs from the 18-CNOT solution
+(warm-started, rotation layers kept so params stay aligned) reaches **14 CNOTs, still
+exact** — the same count as Step-4a peephole and `2×7`. **13 is unreachable**: every
+single removal from the 14-CNOT solution leaves `δ ≥ 0.146` (`reach13.py`, warm + 11
+random restarts). Learn-then-prune and peephole independently converge to 14.
+
+**Threshold — arrangement, not count (`pqc_ring_threshold.py`).** With `ε₂` on each of
+the learned 14 CNOTs (single-qubit gates ideal), the learned 14-CNOT gadget is
+**~1.5–1.9× more noise-robust than Step-4a's 14-CNOT circuit**, nearly reaching the
+2-CNOT destructive gadget at high input noise — although both are exact 14-CNOT
+realizations of the same `U`:
+
+| input `ε` | textbook (16) | Step 4a (14) | learned (14) | dest (2) |
+|-----------|:---:|:---:|:---:|:---:|
+| 0.10 | 0.033 | 0.041 | 0.060 | 0.146 |
+| 0.40 | 0.103 | 0.140 | 0.237 | 0.313 |
+| 0.60 | 0.126 | 0.178 | 0.338 | 0.343 |
+
+So **CNOT count alone does not set the operational threshold — the arrangement does**
+(~2× room at fixed count). The robustness is *emergent* (trained/pruned noise-free), so
+noise-aware selection among 14-CNOT realizations could push it further. Caveats: one
+specific pruned solution; 14-as-floor is strong convergent evidence within this ansatz
+family, not a universal minimality proof. Figure `pqc_ring_threshold.png`.
+
 ### Next
 
 - **optimized decomposition** (Cruz–Murta 7-CNOT; 5 two-qubit-gate Smolin–DiVincenzo)
