@@ -303,6 +303,13 @@ Clifford + 2 Toffoli. Qiskit (`opt2/3`) and pytket (`FullPeepholeOptimise`) both
 optimizers produced, **not a proof of minimality** over the full 5-qubit unitary.
 PyZX minimizes T-count → 27 CNOTs, wrong metric.)
 
+*Threshold added later (`pqec_resynth_noise.py`, PennyLane):* the 14-CNOT circuit is
+replayed identically in PennyLane (HS overlap with `U` = `1.0000000000`; `ε₂=0` read-out
+= `Tr(Oρ²)/Tr(ρ²)` to `1e-16`), then given per-CNOT depol `ε₂`. Its threshold is
+**1.25–1.42× the 16-CNOT textbook** (`ε₂*`: 0.041→0.178 vs 0.033→0.126) — more than the
+`16/14` count ratio, so the found layout also propagates noise a bit more favourably;
+still well below the 2-CNOT Step 4b. Figure `pqec_resynth_threshold.png`.
+
 **Step 4b — same observable (`destructive_gadget.py`).** PQEC needs only
 `F = Tr(Oρ²)/Tr(ρ²)`, which the **destructive / virtual-distillation** measurement
 returns with no ancilla and no controlled-SWAP: a Bell-basis change

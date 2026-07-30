@@ -42,6 +42,24 @@ these tools.
 **Takeaway:** a modest, safe 12.5% CNOT reduction is available for free while
 keeping the exact coherent gadget.
 
+**CNOT-noise threshold (computed, not assumed).** The 14-CNOT circuit is re-implemented
+*identically* in PennyLane (`pqec_resynth_noise.py`, hard-coded gate list; Hilbert–
+Schmidt overlap with the gadget `U` = `1.0000000000` up to global phase; `ε₂=0` read-out
+matches `Tr(Oρ²)/Tr(ρ²)` for `Φ⁺` and `ZZ` to `1e-16`). Putting a 2-qubit depolarizing
+`ε₂` after each of the 14 CNOTs (single-qubit gates ideal — same convention as Step 3b/4b)
+gives, for the purified fidelity `F` with `O=|Φ⁺⟩⟨Φ⁺|`:
+
+| input `ε` | 0.10 | 0.20 | 0.30 | 0.40 | 0.50 | 0.60 |
+|-----------|------|------|------|------|------|------|
+| textbook cSWAP (16) `ε₂*` | 0.033 | 0.061 | 0.085 | 0.103 | 0.117 | 0.126 |
+| **Step 4a optimized (14) `ε₂*`** | **0.041** | **0.079** | **0.112** | **0.140** | **0.162** | **0.178** |
+| ratio 14/16 | 1.25 | 1.29 | 1.32 | 1.36 | 1.39 | 1.42 |
+
+So the exact-unitary reduction lifts the threshold **~1.25–1.42×** — *more* than the naive
+`16/14 = 1.14` count ratio, i.e. the machine-found 14-CNOT layout also propagates noise a
+little more favourably. It stays well below the measurement-only Step 4b (2 CNOTs), as
+expected. Figure: `pqec_resynth_threshold.png`.
+
 ---
 
 ## Step 4b — Measurement-equivalent gadget: 2 CNOTs
@@ -125,7 +143,7 @@ controlled-SWAP gadget.
 | | CNOTs / measurement circuit | keeps | `ε₂*` @ `ε=0.4` |
 |--|:---------------------------:|-------|:---------------:|
 | textbook controlled-SWAP | 16 | coherent purified state | 0.103 |
-| optimized controlled-SWAP (Step 4a) | 14 | coherent purified state | (≳0.103) |
+| optimized controlled-SWAP (Step 4a) | 14 | coherent purified state | **0.140** (computed) |
 | destructive / VD (Step 4b) | **2** (per setting) | observable `⟨O⟩` only | **0.313** |
 
 The per-circuit two-qubit-gate count drops **7–8×** (16→2, or 14→2), and the

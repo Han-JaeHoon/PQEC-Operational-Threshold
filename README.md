@@ -26,7 +26,7 @@ state and the tooling to certify it, before adding the (noisy) purification gadg
 | 2 | Purification (SWAP-test) gadget — ideal, verified on `ρ_ε` | **done** |
 | 3a | Fredkin **global** depolarizing — analytic benchmark (no threshold) | **done** |
 | 3b | **Decomposed** Fredkin (native gates) + realistic noise — operational threshold | **done** |
-| 4a | Unitary-preserving CNOT reduction (16→14, two optimizers, verified) | **done** |
+| 4a | Unitary-preserving CNOT reduction (16→14, verified) + CNOT-noise threshold (1.25–1.42× over 16-CNOT) | **done** |
 | 4b | Destructive/VD gadget (2 CNOTs), closed form, ~2.7–4.4× higher threshold | **done** |
 | 5a/5b | Variational (PQC) compiling of the gadget unitary / ancilla-`|0⟩` isometry — expressibility/trainability squeeze | **done** |
 | 5c | Noise-aware PQC training of the purified observable — threshold vs textbook/4b (specialized estimator) | **done** |
@@ -220,6 +220,20 @@ the 14 vertical links are the CNOTs:
 
 ![Step 4a optimized 14-CNOT gadget](circuit_resynth_14cnot.png)
 
+*Threshold (computed, not assumed).* This exact 14-CNOT circuit is re-implemented
+identically in PennyLane ([`pqec_resynth_noise.py`](pqec_resynth_noise.py); overlap with
+`U` = `1.000000000000`, `ε₂=0` read-out matches `Tr(Oρ²)/Tr(ρ²)` to `1e-16`) and given a
+per-CNOT depolarizing `ε₂` (single-qubit gates ideal). Its threshold is **1.25–1.42×
+higher** than the 16-CNOT textbook — *more* than the naive `16/14` count ratio, so the
+machine-found layout also propagates noise a bit more favourably:
+
+| input `ε` | 0.10 | 0.20 | 0.30 | 0.40 | 0.50 | 0.60 |
+|-----------|------|------|------|------|------|------|
+| textbook cSWAP (16) `ε₂*` | 0.033 | 0.061 | 0.085 | 0.103 | 0.117 | 0.126 |
+| **Step 4a (14) `ε₂*`** | **0.041** | **0.079** | **0.112** | **0.140** | **0.162** | **0.178** |
+
+![Step 4a threshold vs textbook and destructive](pqec_resynth_threshold.png)
+
 **Step 4b — keep only the answer** ([`destructive_gadget.py`](destructive_gadget.py)).
 PQEC never needs the SWAP *unitary* — it needs one number, `F = Tr(Oρ²)/Tr(ρ²)`, which
 is the **expectation value of the SWAP operator** on the two copies. Instead of
@@ -345,6 +359,7 @@ low-CNOT tool.
 | [`CNOT_NOISE_ANALYSIS.md`](CNOT_NOISE_ANALYSIS.md) | Full CNOT-only note: notation/variable definitions, theory (Part I), implementation & verification (Part II) |
 | [`resynthesize_gadget.py`](resynthesize_gadget.py) | Step 4a: unitary-preserving CNOT reduction of the gadget (Qiskit/pytket, 16→14, verified) |
 | [`draw_resynth.py`](draw_resynth.py) | Draws the Step-4a optimized 14-CNOT circuit (`circuit_resynth_14cnot.png`) |
+| [`pqec_resynth_noise.py`](pqec_resynth_noise.py) | Step 4a **threshold**: pure-PennyLane replay of the 14-CNOT circuit (unitary-verified) + CNOT-noise threshold vs textbook/4b (`pqec_resynth_threshold.png`) |
 | [`destructive_gadget.py`](destructive_gadget.py) | Step 4b: destructive/VD gadget (2 CNOTs) — ideal-equivalence proof, closed form, CNOT-noise threshold vs controlled-SWAP; draws `circuit_destructive.png` + `destructive_gadget.png` |
 | [`SWAP_GADGET_OPTIMIZATION.md`](SWAP_GADGET_OPTIMIZATION.md) | Write-up of both CNOT-reduction routes (same-unitary 16→14; same-observable 2 CNOTs) |
 | [`pqc_common.py`](pqc_common.py) | Step 5 shared: target `U`, PQC ansatz, fast numpy unitary + **exact** gradients, LHST cost, PennyLane noisy executor, read-out, references (self-test) |
