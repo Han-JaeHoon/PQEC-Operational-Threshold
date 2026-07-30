@@ -214,6 +214,12 @@ The gadget `H·CSWAP·CSWAP·H` is a fixed 5-qubit unitary. Two peephole optimiz
 unitary. `14 = 2×7` (the per-Fredkin optimum). Safe but modest — the coherent gadget is
 unchanged. (14 is what the tools found, not a proven minimum.)
 
+The machine-optimized 14-CNOT circuit (`draw_resynth.py`; `q0` = ancilla, `q1,q2` =
+kept register `A`, `q3,q4` = discarded `B`) — the `U` boxes are single-qubit rotations,
+the 14 vertical links are the CNOTs:
+
+![Step 4a optimized 14-CNOT gadget](circuit_resynth_14cnot.png)
+
 **Step 4b — keep only the answer** ([`destructive_gadget.py`](destructive_gadget.py)).
 PQEC never needs the SWAP *unitary* — it needs one number, `F = Tr(Oρ²)/Tr(ρ²)`, which
 is the **expectation value of the SWAP operator** on the two copies. Instead of
@@ -338,6 +344,7 @@ low-CNOT tool.
 | [`pqec_cnot_threshold.py`](pqec_cnot_threshold.py) | CNOT-only threshold `ε₂*` (single-qubit gates ideal): closed forms (`F`, `Q`, `N_Φ`, `c_⊥`, `c_z`), circuit checks incl. effective-state anisotropy, threshold table + figure |
 | [`CNOT_NOISE_ANALYSIS.md`](CNOT_NOISE_ANALYSIS.md) | Full CNOT-only note: notation/variable definitions, theory (Part I), implementation & verification (Part II) |
 | [`resynthesize_gadget.py`](resynthesize_gadget.py) | Step 4a: unitary-preserving CNOT reduction of the gadget (Qiskit/pytket, 16→14, verified) |
+| [`draw_resynth.py`](draw_resynth.py) | Draws the Step-4a optimized 14-CNOT circuit (`circuit_resynth_14cnot.png`) |
 | [`destructive_gadget.py`](destructive_gadget.py) | Step 4b: destructive/VD gadget (2 CNOTs) — ideal-equivalence proof, closed form, CNOT-noise threshold vs controlled-SWAP; draws `circuit_destructive.png` + `destructive_gadget.png` |
 | [`SWAP_GADGET_OPTIMIZATION.md`](SWAP_GADGET_OPTIMIZATION.md) | Write-up of both CNOT-reduction routes (same-unitary 16→14; same-observable 2 CNOTs) |
 | [`pqc_common.py`](pqc_common.py) | Step 5 shared: target `U`, PQC ansatz, fast numpy unitary + **exact** gradients, LHST cost, PennyLane noisy executor, read-out, references (self-test) |
