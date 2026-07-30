@@ -375,6 +375,48 @@ noise-aware selection among 14-CNOT realizations could push it further. Caveats:
 specific pruned solution; 14-as-floor is strong convergent evidence within this ansatz
 family, not a universal minimality proof. Figure `pqc_ring_threshold.png`.
 
+---
+
+## 2026-07-30 — Step 5b/5c on the same ansatz: the relaxation ladder (5a=14, 5b=14, 5c=5)
+
+With 5a solved (gadget-matched ansatz compiles `U`, prunes to 14), we ran the **same
+learn-then-prune** procedure on the weaker 5b and 5c targets to find the minimum CNOT
+count each requires — putting all three rungs on one footing.
+
+**5b — isometry (`pqc_ring_5b.py`, `pqc_ring_5b_from14.py`).** Cost
+`1 − |Tr(U₀†V₀)|²/16²` on the `32×16` ancilla-`|0⟩` block. Slightly easier than the full
+unitary mid-depth (`δ_iso ≈ 0.24` vs `0.44` at `L=2`) but still needs `L=3` for exact
+compilation. Pruning is path-dependent (a separately isometry-trained 18-CNOT start
+sticks at 17); pruning honestly from the **14-CNOT full-`U` solution** (which already has
+`δ_iso = 0`) **cannot go below 14** (best 13-try `δ_iso = 0.13`). So
+**min-CNOT(isometry) = 14 = min-CNOT(unitary)** — relaxing unitary → coherent-state saves
+no CNOTs.
+
+**5c — observable via ancilla-parity (`pqc_ring_5c.py`).** Prune the 14-CNOT circuit
+under an **expectation-value cost** matching the anchored correlators `⟨Z_a⟩ → Tr(ρ²)`,
+`⟨Z_a⊗O⟩ → Tr(Oρ²)` for `O ∈ {Φ⁺, ZZ}` over an `ε` grid (anchor kills the `⟨Z_a⟩→0`
+degeneracy). Exact expectation gradient `obs_cost_grad` (vs FD `5.6e-10`; 14-CNOT start
+obs cost `1.4e-30`). Greedy pruning peels `14→13→…→5` (each step obs cost `~1e-11`) to a
+**5-CNOT observable floor** (`(0,1)(2,4)(0,4)(2,4)(0,3)`); 4 unreachable (best `8.4e-2`).
+Saved `pqc_ring_5c_{params.npy,.json}`.
+
+**The ladder (same ansatz + greedy prune, `O ∈ {Φ⁺, ZZ}`):**
+
+| rung | target | min CNOTs | Step-4 analogue |
+|--|--|:--:|:--:|
+| 5a | full unitary `U` | **14** (13 impossible) | 4a (14) |
+| 5b | ancilla-`|0⟩` isometry `U₀` | **14** (= 5a) | between 4a/4b |
+| 5c | observable `F`, ancilla-parity | **5** | 4b |
+| — | observable `F`, structured destructive | **2** (Step 4b, exact) | 4b |
+
+**Lesson.** CNOT savings live entirely at the **observable relaxation**: unitary →
+coherent-state buys nothing (14 → 14), only observable relaxation collapses the count
+(14 → 5 → 2). This reproduces the Step-4 lesson (4a unitary = 14; 4b observable = 2) by
+training-and-pruning on a single ansatz. The 5-vs-2 gap is architectural (generic
+ancilla-parity gadget vs purpose-built virtual distillation). Full write-up in
+`PQC_APPROX.md`. Caveats: specific pruned solutions on one ansatz family; floors are
+convergent evidence, not universal minimality proofs.
+
 ### Next
 
 - **optimized decomposition** (Cruz–Murta 7-CNOT; 5 two-qubit-gate Smolin–DiVincenzo)

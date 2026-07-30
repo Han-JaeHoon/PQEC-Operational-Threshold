@@ -159,6 +159,66 @@ evidence within this ansatz family, not a universal minimality proof.)
 
 ---
 
+## The relaxation ladder on one ansatz+prune footing (5a / 5b / 5c)
+
+With the gadget-matched ansatz solved for 5a, we can run the **same** learn-then-prune
+procedure for the weaker 5b (isometry) and 5c (observable) targets and read off the
+minimum CNOT count each requires. This puts all three rungs of the Step-5 ladder on a
+common footing — same ansatz, same greedy pruning — and answers *where* in the
+unitary → state → observable relaxation the CNOT savings actually appear.
+
+**5b — the ancilla-`|0⟩` isometry `U₀` (`pqc_ring_5b.py`, `pqc_ring_5b_from14.py`).**
+The isometry cost is `1 − |Tr(U₀†V₀)|²/16²` on the `32×16` block. Compiling from
+scratch is slightly easier than the full unitary at intermediate depth (`δ_iso ≈ 0.24`
+vs `0.44` at `L=2`) but still needs `L=3` (18 CNOTs) for exact compilation. Pruning is
+**path-dependent**: greedily pruning a *separately* isometry-trained 18-CNOT solution
+gets stuck at 17 (an artifact of that basin), so the honest test starts from the
+**14-CNOT full-`U` solution** — which already compiles the isometry exactly
+(`δ_iso = 0`) — and prunes with the isometry cost. It **cannot go below 14** (best
+13-CNOT try `δ_iso = 0.13`). So `min-CNOT(isometry) = 14 = min-CNOT(full unitary)`:
+**relaxing from the full unitary to the coherent state / isometry saves no CNOTs.**
+
+**5c — the purified observable via the ancilla-parity read-out (`pqc_ring_5c.py`).**
+Here we keep only the operational read-out `F = ⟨Z_a⊗O⟩/⟨Z_a⟩`. We prune the 14-CNOT
+circuit under an **expectation-value cost** that matches the anchored correlators
+`⟨Z_a⟩ → Tr(ρ²)`, `⟨Z_a⊗O⟩ → Tr(Oρ²)` for `O ∈ {|Φ⁺⟩⟨Φ⁺|, ZZ}` over an `ε` grid
+(anchoring the denominator avoids the `⟨Z_a⟩→0` degeneracy). The cost is differentiated
+exactly (`obs_cost_grad`, `Bracket = Σ_t 2(e_t−τ_t)·ρ_t V† M_t`, matched to finite
+differences at `5.6e-10`; the 14-CNOT start has obs cost `1.4e-30`). Greedy pruning
+then peels the circuit all the way down:
+
+```
+14 → 13 → 12 → 11 → 10 → 9 → 8 → 7 → 6 → 5   (every step obs cost ~1e-11)
+```
+
+reaching a **5-CNOT observable floor** (remaining pairs `(0,1)(2,4)(0,4)(2,4)(0,3)`);
+4 is unreachable (best try `δ = 8.4e-2`). So relaxing to the observable takes the count
+from 14 down to 5 on the *same* ancilla-parity architecture — and the *structured*
+destructive read-out (Step 4b, no ancilla) reaches **2**.
+
+**The ladder (all on the gadget-matched ansatz + greedy prune, `O ∈ {Φ⁺, ZZ}`):**
+
+| rung | target the circuit reproduces | min CNOTs | Step-4 analogue |
+|--|--|:--:|:--:|
+| **5a** | full 5-qubit unitary `U` | **14** (13 impossible) | 4a (14) |
+| **5b** | ancilla-`|0⟩` isometry `U₀` | **14** (same as 5a) | between 4a/4b |
+| **5c** | purified observable `F`, ancilla-parity read-out | **5** | 4b |
+| — | purified observable `F`, *structured* destructive read-out | **2** (Step 4b, exact) | 4b |
+
+**Reading.** The CNOT savings are concentrated entirely at the **observable
+relaxation**. Going unitary → coherent-state (5a → 5b) buys nothing (14 → 14); only
+discarding the coherent output and keeping just `F` (5b → 5c) collapses the count
+(14 → 5), and switching from an ancilla-parity to a structured destructive read-out
+takes it further (5 → 2). This mirrors Step 4 exactly (4a keeps the unitary at 14; 4b
+keeps only the observable at 2) — the learned setting reproduces the same lesson:
+**relax the requirement to the observable, not to the state.** The 5-vs-2 gap is
+architectural (a generic ancilla-parity gadget vs the purpose-built virtual-distillation
+measurement), not a limit of the training. (Caveats as before: specific pruned solutions
+on one ansatz family; floors are strong convergent evidence, not universal minimality
+proofs.)
+
+---
+
 ## Step 5c — noise-aware training of the observable (the useful route)
 
 Relaxing all the way to the operational scalar `F(ε)` for `O ∈ {|Φ⁺⟩⟨Φ⁺|, ZZ}` gives
@@ -243,6 +303,8 @@ Step 4. Figure: `pqc_noise_aware.png`.
 | [`pqc_ring_prune.py`](pqc_ring_prune.py) | greedy CNOT pruning of the 18-CNOT solution → 14 (exact); saves `pqc_ring_pruned_*.{npy,json}` |
 | [`reach13.py`](reach13.py) | rigorous test that 13 CNOTs is unreachable (14 is the floor here) |
 | [`pqc_ring_threshold.py`](pqc_ring_threshold.py) | CNOT-noise threshold of the learned 14-CNOT gadget vs Step 4a/textbook/4b (`pqc_ring_threshold.png`) |
+| [`pqc_ring_5b.py`](pqc_ring_5b.py), [`pqc_ring_5b_from14.py`](pqc_ring_5b_from14.py) | 5b rung: isometry compile + prune (from-scratch and from the 14-CNOT full-`U` solution) → isometry floor **14** |
+| [`pqc_ring_5c.py`](pqc_ring_5c.py) | 5c rung: prune the 14-CNOT circuit under the ancilla-parity **observable** cost (exact expectation gradient) → observable floor **5**; saves `pqc_ring_5c_{params.npy,.json}` |
 
 ## Takeaway
 
@@ -265,3 +327,10 @@ above the 16-CNOT gadget toward the exact 2-CNOT Step-4b **reference** — but t
 circuit is a **specialized estimator** (Bell-isotropic inputs, `{Φ⁺, ZZ}`), not a general
 gadget, and noise-aware training added no further gain for the objectives tried (an
 empirical negative consistent with unital noise, not a proof of impossibility).
+
+**(3) The CNOT savings live at the observable relaxation, not the state relaxation.**
+Running the same learn-then-prune down the whole ladder gives min-CNOT counts **5a = 14,
+5b = 14, 5c = 5** (ancilla-parity), with the structured Step-4b destructive read-out at
+**2**. Relaxing unitary → coherent-state costs nothing (14 → 14); only relaxing to the
+observable collapses the count (14 → 5 → 2) — precisely the Step-4 lesson, now
+reproduced by training and pruning on a single ansatz.

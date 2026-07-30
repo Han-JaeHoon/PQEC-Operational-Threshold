@@ -29,8 +29,8 @@ state and the tooling to certify it, before adding the (noisy) purification gadg
 | 4a | Unitary-preserving CNOT reduction (16→14, verified) + CNOT-noise threshold (1.25–1.42× over 16-CNOT) | **done** |
 | 4b | Destructive/VD gadget (2 CNOTs), closed form, ~2.7–4.4× higher threshold | **done** |
 | 5a | Variational (PQC) compiling of the gadget unitary — **exact at 18 CNOTs** (gadget-matched RX-RY-RZ ansatz); prunes to **14** (=Step 4a; 13 impossible); learned 14-CNOT threshold **~1.5–1.9× Step 4a** | **done** |
-| 5b | Ancilla-`\|0⟩` isometry compiling — easier than 5a; earlier generic ansätze hit an expressibility/trainability squeeze | **done** |
-| 5c | Noise-aware PQC training of the purified observable — threshold vs textbook/4b (specialized estimator) | **done** |
+| 5b | Ancilla-`\|0⟩` isometry compiling — same-ansatz learn-then-prune floor is also **14** (relaxing to the coherent state saves no CNOTs) | **done** |
+| 5c | Purified observable — noise-aware training (specialized estimator); same-ansatz prune of the 14-CNOT circuit under the ancilla-parity cost floors at **5** (structured destructive = 2) | **done** |
 
 ## The noisy input state
 
@@ -305,6 +305,24 @@ So CNOT **count alone does not set the operational threshold — the arrangement
 with ~2× of room at fixed count. (The robustness is emergent: the circuit was trained
 and pruned noise-free.)
 
+**The relaxation ladder on one footing (5a / 5b / 5c).** Running the *same*
+learn-then-prune down the weaker targets shows *where* CNOT savings appear. The isometry
+([`pqc_ring_5b.py`](pqc_ring_5b.py)) prunes to **14** — the same as the full unitary, so
+relaxing unitary → coherent-state saves nothing. Only relaxing to the **observable**
+([`pqc_ring_5c.py`](pqc_ring_5c.py), pruning the 14-CNOT circuit under the ancilla-parity
+correlator cost) collapses the count to **5**, and the structured destructive read-out
+(Step 4b) reaches **2**:
+
+| rung | target | min CNOTs |
+|--|--|:--:|
+| 5a | full unitary `U` | **14** (13 impossible) |
+| 5b | ancilla-`\|0⟩` isometry `U₀` | **14** (= 5a) |
+| 5c | observable `F`, ancilla-parity | **5** |
+| — | observable `F`, structured destructive (Step 4b) | **2** |
+
+This reproduces the Step-4 lesson by training: **relax the requirement to the observable,
+not to the state.**
+
 **Step 5c — noise-aware observable training (the useful route).** Relaxing to the
 operational scalar `F(ε)` (matched for `O ∈ {|Φ⁺⟩⟨Φ⁺|, ZZ}`) is a low-dimensional,
 plateau-free target that trains easily at a **small** budget (`B=6`). To avoid a
@@ -373,6 +391,8 @@ low-CNOT tool.
 | [`pqc_ring_prune.py`](pqc_ring_prune.py) | Greedy CNOT pruning of the 18-CNOT solution → **14** (exact); saves `pqc_ring_pruned_*.{npy,json}` |
 | [`reach13.py`](reach13.py) | Rigorous test that **13 CNOTs is unreachable** (14 is the floor here) |
 | [`pqc_ring_threshold.py`](pqc_ring_threshold.py) | CNOT-noise threshold of the learned 14-CNOT gadget vs Step 4a/textbook/4b (`pqc_ring_threshold.png`) |
+| [`pqc_ring_5b.py`](pqc_ring_5b.py), [`pqc_ring_5b_from14.py`](pqc_ring_5b_from14.py) | 5b rung: isometry compile + prune → floor **14** (= 5a) |
+| [`pqc_ring_5c.py`](pqc_ring_5c.py) | 5c rung: prune the 14-CNOT circuit under the ancilla-parity observable cost → floor **5**; saves `pqc_ring_5c_{params.npy,.json}` |
 | [`draw_pqc_ansatz.py`](draw_pqc_ansatz.py) | draws the ansatz structure (`circuit_pqc_ansatz.png`) |
 | [`PQC_APPROX.md`](PQC_APPROX.md) | Step 5 write-up: three targets, the LHST derivation, the expressibility/trainability squeeze, and the noise-aware threshold result |
 | [`requirements.txt`](requirements.txt) | Dependencies (pinned minimums + tested versions) |
