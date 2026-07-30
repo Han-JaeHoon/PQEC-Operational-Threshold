@@ -104,6 +104,37 @@ def draw(mask, params, fname, title):
 # ---------------------------------------------------------------------------
 # analytic spec (exact primitive gate list + merged SU(2) blocks) for GPT
 # ---------------------------------------------------------------------------
+def _build_raw_qnode(mask, params):
+    """QNode of the EXACT ansatz: RX/RY/RZ per wire + CNOTs, no merging."""
+    ops = ansatz_masked(mask)
+    gate = {"rx": qml.RX, "ry": qml.RY, "rz": qml.RZ}
+
+    def circuit():
+        for op in ops:
+            if op[0] == "g":
+                _, kind, w, p = op
+                gate[kind](params[p], wires=w)
+            else:
+                qml.CNOT(wires=[op[1], op[2]])
+        return qml.state()
+    return circuit
+
+
+def draw_raw(mask, params, fname, title):
+    """Draw the exact RX-RY-RZ + CNOT ansatz (all rotation layers kept)."""
+    ncx = sum(mask)
+    fig, ax = qml.draw_mpl(_build_raw_qnode(mask, params), wire_order=range(5),
+                           show_all_wires=True)()
+    for i, lab in WIRE_LABELS.items():
+        ax.text(-2.2, i, lab, ha="right", va="center", fontsize=11)
+    ax.set_title(f"{title}\n{ncx} CNOTs; exact ansatz = initial RX-RY-RZ layer + a full "
+                 f"RX-RY-RZ layer after every CNOT slot (19 rotation layers, 285 params)",
+                 fontsize=12)
+    fig.savefig(fname, dpi=110, bbox_inches="tight")
+    plt.close(fig)
+    print(f"  wrote {fname}")
+
+
 def _primitive_lines(mask, params):
     """Exact ordered primitive gates with numeric angles."""
     lines, layer = [], 0
@@ -186,6 +217,8 @@ def main():
     b_a, c_a, ov_a = draw(mask_a, par_a, "circuit_pqc_5a.png",
                           "Step 5a / 5b — learned 14-CNOT circuit "
                           "(compiles U = H_a·CSWAP·CSWAP·H_a exactly)")
+    draw_raw(mask_a, par_a, "circuit_pqc_5a_raw.png",
+             "Step 5a / 5b — learned 14-CNOT circuit, primitive RX-RY-RZ + CNOT form")
     tgt_a = abs(np.vdot(U_TARGET, unitary(ansatz_masked(mask_a), par_a))) / DIM
     prim_ops_a, prim_a = _primitive_lines(mask_a, par_a)
 

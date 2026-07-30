@@ -294,6 +294,13 @@ the 5a and the 5b circuit:
 
 ![Step 5a/5b learned 14-CNOT circuit](circuit_pqc_5a.png)
 
+The same circuit in its **exact primitive `RX`-`RY`-`RZ` + CNOT form** (as trained: an
+initial RX-RY-RZ layer plus a full RX-RY-RZ layer after every CNOT slot — 19 rotation
+layers, 285 parameters; the compact view above merges each inter-CNOT run into one net
+`Rot`). Best viewed zoomed in:
+
+![Step 5a/5b 14-CNOT circuit, RX-RY-RZ primitive form](circuit_pqc_5a_raw.png)
+
 **The arrangement — not the count — sets the noise threshold**
 ([`pqc_ring_threshold.py`](pqc_ring_threshold.py)). Putting `ε₂` on each of the learned
 14 CNOTs (single-qubit gates ideal) gives a threshold **~1.5–1.9× higher than Step 4a's
@@ -410,7 +417,7 @@ low-CNOT tool.
 | [`pqc_ring_threshold.py`](pqc_ring_threshold.py) | CNOT-noise threshold of the learned 14-CNOT gadget vs Step 4a/textbook/4b (`pqc_ring_threshold.png`) |
 | [`pqc_ring_5b.py`](pqc_ring_5b.py), [`pqc_ring_5b_from14.py`](pqc_ring_5b_from14.py) | 5b rung: isometry compile + prune → floor **14** (= 5a) |
 | [`pqc_ring_5c.py`](pqc_ring_5c.py) | 5c rung: prune the 14-CNOT circuit under the ancilla-parity observable cost → floor **5**; saves `pqc_ring_5c_{params.npy,.json}` |
-| [`draw_pqc_5abc.py`](draw_pqc_5abc.py) | draws the learned 5a/5b (`circuit_pqc_5a.png`) and 5c (`circuit_pqc_5c.png`) circuits and writes the analytic spec `PQC_CIRCUITS_FOR_ANALYSIS.md` |
+| [`draw_pqc_5abc.py`](draw_pqc_5abc.py) | draws the learned 5a/5b (merged `circuit_pqc_5a.png`, primitive `circuit_pqc_5a_raw.png`) and 5c (`circuit_pqc_5c.png`) circuits and writes the analytic spec `PQC_CIRCUITS_FOR_ANALYSIS.md` |
 | [`draw_pqc_ansatz.py`](draw_pqc_ansatz.py) | draws the ansatz structure (`circuit_pqc_ansatz.png`) |
 | [`PQC_APPROX.md`](PQC_APPROX.md) | Step 5 write-up: three targets, the LHST derivation, the expressibility/trainability squeeze, and the noise-aware threshold result |
 | [`requirements.txt`](requirements.txt) | Dependencies (pinned minimums + tested versions) |
