@@ -214,11 +214,13 @@ The gadget `H·CSWAP·CSWAP·H` is a fixed 5-qubit unitary. Two peephole optimiz
 unitary. `14 = 2×7` (the per-Fredkin optimum). Safe but modest — the coherent gadget is
 unchanged. (14 is what the tools found, not a proven minimum.)
 
-The machine-optimized 14-CNOT circuit (`draw_resynth.py`; `q0` = ancilla, `q1,q2` =
-kept register `A`, `q3,q4` = discarded `B`) — the `U` boxes are single-qubit rotations,
-the 14 vertical links are the CNOTs:
+The machine-optimized 14-CNOT circuit, re-implemented **identically in PennyLane**
+([`draw_resynth_pl.py`](draw_resynth_pl.py); wire `0` = ancilla, `1,2` = kept register
+`A`, `3,4` = discarded `B`) — the `U3` boxes are single-qubit rotations (angles in
+radians), the 14 dot + ⊕ links are the CNOTs. The threshold analysis inserts a 2-qubit
+depolarizing `ε₂` after each CNOT:
 
-![Step 4a optimized 14-CNOT gadget](circuit_resynth_14cnot.png)
+![Step 4a 14-CNOT gadget (PennyLane)](circuit_resynth_pennylane.png)
 
 *Threshold (computed, not assumed).* This exact 14-CNOT circuit is re-implemented
 identically in PennyLane ([`pqec_resynth_noise.py`](pqec_resynth_noise.py); overlap with
@@ -358,7 +360,7 @@ low-CNOT tool.
 | [`pqec_cnot_threshold.py`](pqec_cnot_threshold.py) | CNOT-only threshold `ε₂*` (single-qubit gates ideal): closed forms (`F`, `Q`, `N_Φ`, `c_⊥`, `c_z`), circuit checks incl. effective-state anisotropy, threshold table + figure |
 | [`CNOT_NOISE_ANALYSIS.md`](CNOT_NOISE_ANALYSIS.md) | Full CNOT-only note: notation/variable definitions, theory (Part I), implementation & verification (Part II) |
 | [`resynthesize_gadget.py`](resynthesize_gadget.py) | Step 4a: unitary-preserving CNOT reduction of the gadget (Qiskit/pytket, 16→14, verified) |
-| [`draw_resynth.py`](draw_resynth.py) | Draws the Step-4a optimized 14-CNOT circuit (`circuit_resynth_14cnot.png`) |
+| [`draw_resynth_pl.py`](draw_resynth_pl.py) | Draws the PennyLane implementation of the Step-4a 14-CNOT circuit (`circuit_resynth_pennylane.png`) |
 | [`pqec_resynth_noise.py`](pqec_resynth_noise.py) | Step 4a **threshold**: pure-PennyLane replay of the 14-CNOT circuit (unitary-verified) + CNOT-noise threshold vs textbook/4b (`pqec_resynth_threshold.png`) |
 | [`destructive_gadget.py`](destructive_gadget.py) | Step 4b: destructive/VD gadget (2 CNOTs) — ideal-equivalence proof, closed form, CNOT-noise threshold vs controlled-SWAP; draws `circuit_destructive.png` + `destructive_gadget.png` |
 | [`SWAP_GADGET_OPTIMIZATION.md`](SWAP_GADGET_OPTIMIZATION.md) | Write-up of both CNOT-reduction routes (same-unitary 16→14; same-observable 2 CNOTs) |

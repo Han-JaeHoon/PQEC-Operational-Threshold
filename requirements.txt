@@ -12,7 +12,6 @@ matplotlib>=3.8      # verified with 3.11.1  (circuit drawing + Step-5 figures)
 
 # Tested on Python 3.11.
 
-# Optional (only for resynthesize_gadget.py / draw_resynth.py, Step 4a):
+# Optional (only for resynthesize_gadget.py, Step 4a unitary-preserving CNOT count):
 #   qiskit>=1.0      # verified with 2.5.1
 #   pytket           # verified with 2.18.1
-#   pylatexenc       # only for draw_resynth.py (qiskit matplotlib circuit drawer)
