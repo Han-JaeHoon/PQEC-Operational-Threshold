@@ -7,7 +7,7 @@ or numerical result: the Step 3 / Step 4 / Step 5 circuit drawings are built *di
 from the actual simulation objects, so the picture is identical to what is simulated:
 
   * Step 3 (textbook 16-CNOT)      -- replays verify_analytic_decomposed._fred (the exact
-                                       8-CNOT/Fredkin decomposition) and renders the
+                                       8-CNOT/Controlled-SWAP decomposition) and renders the
                                        captured operation tape (16 CNOTs).
   * Step 4 (resynthesized 14-CNOT) -- renders pqec_resynth_noise.GATES verbatim (14 cx).
   * Step 5 (learned 14-CNOT)       -- renders draw_pqc_5abc.merged_circuit() from the
@@ -286,7 +286,7 @@ def fig_step1():
 
 
 # ===========================================================================
-# Figure 3 — Step 2: Fredkin-level global noise
+# Figure 3 — Step 2: CSWAP-level global noise
 # ===========================================================================
 def fig_step2():
     items = [
@@ -299,11 +299,11 @@ def fig_step2():
     ]
     draw_circuit(
         items, WIRES5, "step2_fredkin_noise_circuit.png",
-        title="Step 2: Fredkin-level global replacement depolarizing noise",
+        title="Step 2: CSWAP-level global replacement depolarizing noise",
         brace_groups=[(1, 2, r"copy 1: $\rho_t$"), (3, 4, r"copy 2: $\rho_t$")],
-        notes=[r"$G_g^{(ijk)}$: three-qubit replacement depolarizing channel after each"
-               r" Fredkin — the first acts on exactly $(a,A_1,B_1)$, the second on"
-               r" exactly $(a,A_2,B_2)$."],
+        notes=[r"$G_g^{(ijk)}$: one joint three-qubit replacement depolarizing channel"
+               r" after each CSWAP; the first acts on $(a,A_1,B_1)$, and the second acts"
+               r" on $(a,A_2,B_2)$."],
         col_scale=1.5,
     )
 
@@ -351,11 +351,11 @@ def fig_step3():
     assert ncx == 16, f"Step 3 must have 16 CNOTs, got {ncx}"
     draw_circuit(
         items, WIRES5, "step3_textbook_16cnot_circuit.png",
-        title=r"Step 3: textbook two-Fredkin decomposition (16 CNOTs)",
-        notes=[r"Textbook Clifford+$T$ Toffoli (6 CNOTs) $\Rightarrow$ 8 CNOTs per Fredkin,"
-               r" 16 total; single-qubit gates ideal.",
+        title=r"Step 3: textbook two-Controlled-SWAP decomposition (16 CNOTs)",
+        notes=[r"Textbook Clifford+$T$ decomposition: 8 CNOTs per Controlled-SWAP,"
+               r" 16 CNOTs in total; single-qubit gates are ideal.",
                r"A two-qubit replacement depolarizing channel $D_q$ is applied after"
-               r" every CNOT (16 in total)."],
+               r" every CNOT."],
         col_scale=0.92,
     )
     return ncx, cx_seq
