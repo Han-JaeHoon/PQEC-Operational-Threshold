@@ -62,6 +62,9 @@ def _span(item, nw):
     if tp == "noise":
         ws = item["wires"]
         return list(range(min(ws), max(ws) + 1))
+    if tp == "noisebox":
+        ws = item["wires"]
+        return list(range(min(ws), max(ws) + 1))
     if tp == "full":
         return list(range(nw))
     raise ValueError(tp)
@@ -149,6 +152,17 @@ def draw_circuit(items, wire_labels, outname, title=None, notes=None,
                 d = 0.16
                 ax.plot([x - d, x + d], [yy - d, yy + d], color="k", lw=LW, zorder=5)
                 ax.plot([x - d, x + d], [yy + d, yy - d], color="k", lw=LW, zorder=5)
+        elif tp == "noisebox":
+            # ONE joint multi-qubit channel: a single dashed light-gray rectangle
+            # covering all its wires together (not per-wire boxes).
+            ws = sorted(it["wires"])
+            yhi, ylo = _y(ws[0], nw), _y(ws[-1], nw)
+            bw = it.get("box_w", BOX_W)
+            ax.add_patch(Rectangle((x - bw / 2, ylo - BOX_H / 2), bw,
+                         (yhi - ylo) + BOX_H, facecolor=NOISE_FILL, edgecolor="k",
+                         lw=LW, linestyle="--", zorder=3))
+            ax.text(x, yhi + BOX_H / 2 + 0.34, it["label"], ha="center", va="bottom",
+                    fontsize=FS_GATE, zorder=4)
         elif tp == "noise":
             ws = sorted(it["wires"])
             ys = [_y(w, nw) for w in ws]
@@ -227,17 +241,21 @@ def fig_setup():
     items = [
         {"type": "box", "wire": 0, "label": "H"},
         {"type": "cnot", "ctrl": 0, "targ": 1},
-        {"type": "noise", "wires": [0, 1], "label": r"$D_\varepsilon$"},
+        # ONE joint two-qubit channel acting on q0 and q1 together (not two 1-qubit boxes)
+        {"type": "noisebox", "wires": [0, 1], "box_w": 0.92,
+         "label": r"$D_\varepsilon^{(q_0,q_1)}$"},
     ]
     draw_circuit(
         items, [r"$q_0$", r"$q_1$"], "setup_bell_input.png",
         title="Setup: Bell-isotropic input preparation",
         left_labels=[r"$|0\rangle$", r"$|0\rangle$"],
         right_labels=[r"$\rho_t$", ""],
-        notes=[r"$D_\varepsilon$: two-qubit replacement depolarizing channel"
-               r"  $\Rightarrow\ \rho_t=(1-\varepsilon)\Phi+\varepsilon\,I/4$,"
-               r"  $t=1-\varepsilon$."],
-        col_scale=1.25,
+        notes=[r"$D_\varepsilon^{(q_0,q_1)}$: one joint two-qubit replacement depolarizing"
+               r" channel,  $D_\varepsilon^{(q_0,q_1)}(\rho)=(1-\varepsilon)\rho"
+               r"+\varepsilon\,(I_4/4)\,\mathrm{Tr}(\rho)$",
+               r"$\Rightarrow\ \rho_t=(1-\varepsilon)\,\Phi+\varepsilon\,I_4/4,"
+               r"\quad t=1-\varepsilon.$"],
+        col_scale=1.35,
     )
 
 
