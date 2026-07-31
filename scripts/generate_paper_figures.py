@@ -178,17 +178,37 @@ def draw_circuit(items, wire_labels, outname, title=None, notes=None,
                     fontsize=FS_NOTE, color="0.2", rotation=90)
 
     ax.set_xlim(xL - 1.7 * dx, xR + 1.9 * dx)
-    ax.set_ylim(_y(nw - 1, nw) - 1.15, _y(0, nw) + 1.15)
+    nlines = len(notes) if notes else 0
+    ax.set_ylim(_y(nw - 1, nw) - 1.0 - 0.44 * max(1, nlines), _y(0, nw) + 1.35)
     ax.set_aspect("equal")
+    ax.patch.set_visible(False)
 
-    ytop = _y(0, nw) + 0.9
+    # Center title + notes over the ACTUAL drawn circuit content (not the wire span),
+    # so they are visually centered left-right in the saved (tight-bbox) image.
+    fig.canvas.draw()
+    r = fig.canvas.get_renderer()
+    xs = []
+    for art in list(ax.lines) + list(ax.patches) + list(ax.texts):
+        try:
+            bb = art.get_window_extent(renderer=r)
+            if bb.width > 0:
+                xs += [bb.x0, bb.x1]
+        except Exception:
+            pass
+    inv = ax.transData.inverted()
+    xc = (xL + xR) / 2
+    if xs:
+        x0d = inv.transform((min(xs), 0))[0]
+        x1d = inv.transform((max(xs), 0))[0]
+        xc = 0.5 * (x0d + x1d)
+
     if title:
-        ax.text((xL + xR) / 2, _y(0, nw) + 1.05, title, ha="center", va="bottom",
+        ax.text(xc, _y(0, nw) + 1.08, title, ha="center", va="bottom",
                 fontsize=FS_WIRE + 1)
     if notes:
-        ybase = _y(nw - 1, nw) - 0.7
+        ybase = _y(nw - 1, nw) - 0.72
         for i, nline in enumerate(notes):
-            ax.text(xL, ybase - i * 0.42, nline, ha="left", va="top",
+            ax.text(xc, ybase - i * 0.44, nline, ha="center", va="top",
                     fontsize=FS_NOTE, color="0.1")
 
     out = os.path.join(FIG, outname)
