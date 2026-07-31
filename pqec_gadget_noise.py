@@ -1,6 +1,6 @@
 """
-Step 3 (v1) -- Noise on the Fredkin gates of the PQEC gadget.
-============================================================
+Step 2 -- Fredkin-level global replacement depolarizing noise on the PQEC gadget.
+=================================================================================
 
 Noise model requested: immediately after each controlled-SWAP (Fredkin), apply a
 3-qubit GLOBAL depolarizing channel of strength g_F to the three qubits that
@@ -123,7 +123,7 @@ def no_qec(eps):
 # ===========================================================================
 def main():
     print("=" * 74)
-    print(" Step 3 (v1) -- 3-qubit global depolarizing g_F after each Fredkin")
+    print(" Step 2 -- 3-qubit global depolarizing g_F after each Fredkin")
     print("=" * 74)
 
     # -- sanity: g_F = 0 reproduces the ideal gadget ------------------------

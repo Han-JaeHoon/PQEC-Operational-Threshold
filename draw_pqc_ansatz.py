@@ -1,8 +1,9 @@
 """Draw the Step-5 hardware-efficient PQC ansatz structure (default B=6).
 
 Three stages: a full Rot layer, then per-CNOT Rot pairs (ancilla-centric CNOT
-schedule), then a final full Rot layer -> 30 + 6B parameters. In Step 5c the same
-circuit runs on default.mixed with a 2-qubit depolarizing channel after each CNOT.
+schedule), then a final full Rot layer -> 30 + 6B parameters. In the auxiliary
+observable study the same circuit runs on default.mixed with a 2-qubit depolarizing
+channel after each CNOT.
 
 Run:  python draw_pqc_ansatz.py
 """

@@ -1,5 +1,5 @@
 """
-Step 2 -- The PQEC purification gadget (ideal / noiseless).
+Step 1 -- The PQEC purification gadget (ideal / noiseless).
 ===========================================================
 
 The SWAP-test "gadget" is the primitive of PQEC.  Given two identical noisy copies
@@ -11,10 +11,10 @@ reading the ancilla extracts the *purified* component
 which concentrates weight on the dominant eigenvector of rho.  Here the register is
 the 2-qubit Bell register (M = 2), so the controlled-SWAP is two parallel Fredkin
 gates on an ancilla.  This module implements the gadget as a genuine mixed-state
-circuit on top of the Step-1 input state rho_eps and verifies it.
+circuit on top of the Setup input state rho_eps and verifies it.
 
 Two equivalent read-outs of the same gadget (both used later, when the gadget is
-made noisy in Step 3):
+made noisy in Steps 2-4):
 
   * state extraction (Eq. 9):
         rho^2 = P_+ rho_+ - P_- rho_-  =  (ancilla |0> block) - (|1> block),
@@ -120,7 +120,7 @@ def obs_purified(rho, O=O_PHI_PLUS):
 # ---------------------------------------------------------------------------
 def verify(tol=1e-13, verbose=True):
     """Check that the gadget extracts rho^2/Tr[rho^2] (state) and Tr(O rho^2)/Tr(rho^2)
-    (observable), on random states and on the Step-1 input rho_eps."""
+    (observable), on random states and on the Setup input rho_eps."""
     rng = np.random.default_rng(1)
     ok = True
 
@@ -170,7 +170,7 @@ def verify(tol=1e-13, verbose=True):
 # ===========================================================================
 def main():
     print("=" * 78)
-    print(" Step 2 -- ideal PQEC purification gadget on rho_eps")
+    print(" Step 1 -- ideal PQEC purification gadget on rho_eps")
     print("=" * 78)
 
     print("\n Verification:")

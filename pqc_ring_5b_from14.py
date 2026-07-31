@@ -1,10 +1,10 @@
-"""Corrected 5b: does the ISOMETRY need fewer CNOTs than the full unitary?
+"""Auxiliary (isometry): does the ISOMETRY need fewer CNOTs than the full unitary?
 
 Start from the 14-CNOT solution that compiles the full U (which therefore compiles the
 isometry exactly), and greedily prune further using the ISOMETRY cost. If it drops
-below 14, the isometry genuinely needs fewer CNOTs (5b < 5a); if it stops at 14, both
-share the floor. This avoids the greedy path-dependence of starting from a separate
-18-CNOT isometry solution.
+below 14, the isometry genuinely needs fewer CNOTs (isometry < unitary); if it stops at
+14, both share the floor. This avoids the greedy path-dependence of starting from a
+separate 18-CNOT isometry solution.
 """
 import json, numpy as np
 from scipy.optimize import minimize
@@ -38,7 +38,7 @@ def main(tol=1e-6):
     ops = ansatz_masked(mask)
     dfull = cost_grad(ops, theta, U_TARGET, np.eye(DIM, dtype=complex))[0]
     diso = iso_delta(ops, theta)
-    print(f"14-CNOT (5a) solution: delta_full = {dfull:.2e}, delta_iso = {diso:.2e}")
+    print(f"14-CNOT (Step 5) solution: delta_full = {dfull:.2e}, delta_iso = {diso:.2e}")
     print(f"  (isometry compiled by the 14-CNOT full-U circuit as expected)\n", flush=True)
 
     cur = theta.copy()
@@ -59,8 +59,8 @@ def main(tol=1e-6):
         else:
             print(f"  no further removal keeps delta_iso<{tol:g} (best try = {d:.2e})", flush=True)
             break
-    print(f"\n  5b isometry floor (pruned from the 14-CNOT full-U solution) = {sum(mask)} CNOTs")
-    print(f"  (5a full-unitary floor = 14)")
+    print(f"\n  isometry floor (pruned from the 14-CNOT full-U solution) = {sum(mask)} CNOTs")
+    print(f"  (Step 5 full-unitary floor = 14)")
 
 
 if __name__ == "__main__":

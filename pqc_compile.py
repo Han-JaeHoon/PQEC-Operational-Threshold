@@ -1,12 +1,13 @@
 """
-Step 5a / 5b -- variational (PQC) compiling of the PQEC gadget.
-==============================================================
+Auxiliary -- generic-ansatz variational (PQC) compiling of the PQEC gadget.
+===========================================================================
 
+(Not part of the main linear flow; background for the Step-5 gadget-matched ansatz.)
 We try to train a hardware-efficient PQC V(theta) (CNOT budget B, pqc_common.ansatz_ops)
 to reproduce the gadget U = H_a CSWAP CSWAP H_a in two senses, and sweep B:
 
-  * Step 5a -- FULL unitary:      minimise  1 - |Tr(U^dag V)|^2 / 32^2
-  * Step 5b -- COHERENT state:    minimise  1 - |Tr(U0^dag V0)|^2 / 16^2
+  * FULL unitary:      minimise  1 - |Tr(U^dag V)|^2 / 32^2
+  * COHERENT state:    minimise  1 - |Tr(U0^dag V0)|^2 / 16^2
                (U0 = U on the ancilla-|0> input block -- the only inputs PQEC ever
                feeds the gadget; V0 = V restricted to those 16 columns; this is the
                coherent purified state that would be fed forward)
@@ -21,15 +22,15 @@ What this script demonstrates (see PQC_APPROX.md for the discussion):
     at B=12 the optimizer recompiles reachable targets to 1e-15 (so U's failure is
     expressibility), while by B=20 it fails even on reachable targets (a genuine
     trainability/plateau barrier).  Either way from-scratch compiling does NOT beat the
-    structured Step-4a decomposition -- but this is ansatz-specific, not a claim that U
+    structured Step-4 decomposition -- but this is ansatz-specific, not a claim that U
     is uncompilable.
-  * The COHERENT-state target (5b) is consistently EASIER than the full unitary (5a)
+  * The COHERENT-state (isometry) target is consistently EASIER than the full unitary
     -- lower delta at every budget -- because it need only match the 16 physical
     (ancilla-|0>) columns.  This is the same relaxation ladder as Step 4:
-    unitary (5a) harder than state (5b) harder than observable (5c).
+    unitary harder than state harder than observable.
 
-The upshot motivates Step 5c: don't reproduce the unitary or the state -- reproduce
-only the purified OBSERVABLE, which is low-dimensional and trains easily.
+The upshot motivates the observable study: don't reproduce the unitary or the state --
+reproduce only the purified OBSERVABLE, which is low-dimensional and trains easily.
 
 Run:  python pqc_compile.py
 """
@@ -69,15 +70,15 @@ def _obs_error(ops, theta):
 
 def run(restarts=16):
     print("=" * 82)
-    print(" Step 5a / 5b -- variational compiling of  U = H_a CSWAP CSWAP H_a")
+    print(" Auxiliary -- generic-ansatz variational compiling of  U = H_a CSWAP CSWAP H_a")
     print("=" * 82)
     print(f"  ansatz: hardware-efficient, n_params = 30 + 6B;  L-BFGS restarts = {restarts}")
     print("  delta = 1 - gate fidelity (0 = exact);  obs_err = worst |F_PQC - F_exact|\n")
 
     res = {"5a": {}, "5b": {}, "5a_lhst": {}}
     t0 = time.time()
-    print(f"  {'B':>3} | {'5a delta':>10} {'obs':>8} | {'5b delta':>10} {'obs':>8} | "
-          f"{'5a-LHST delta':>13}")
+    print(f"  {'B':>3} | {'unit delta':>10} {'obs':>8} | {'iso delta':>10} {'obs':>8} | "
+          f"{'unit-LHST':>13}")
     print("  " + "-" * 70)
     for B in BUDGETS:
         ops, npar = ansatz_ops(B)
@@ -106,27 +107,27 @@ def run(restarts=16):
     best5a = min(res["5a"][B][0] for B in BUDGETS)
     best5b = min(res["5b"][B][0] for B in BUDGETS)
     best5al = min(res["5a_lhst"][B] for B in BUDGETS)
-    print(f"   * best full-unitary infidelity over the sweep (5a, global cost): {best5a:.2e}")
+    print(f"   * best full-unitary infidelity over the sweep (global cost):      {best5a:.2e}")
     print(f"   * best full-unitary infidelity with the LHST local cost:         {best5al:.2e}")
-    print(f"   * best anc-|0> isometry infidelity (5b):                          {best5b:.2e}")
+    print(f"   * best anc-|0> isometry infidelity:                               {best5b:.2e}")
     lower = all(res["5b"][B][0] <= res["5a"][B][0] + 1e-9 for B in BUDGETS)
-    print(f"   * 5b (isometry) <= 5a (unitary) at every budget: {lower}")
+    print(f"   * isometry <= unitary at every budget: {lower}")
     print("   * None reaches a useful accuracy (delta -> 0); the teacher-student test")
     print("     (test_inclass.py) shows an expressibility/trainability squeeze, so")
-    print("     from-scratch PQC compiling does NOT beat Step-4a's 14 CNOTs.")
-    print("   * The relaxation ladder unitary(5a) > state(5b) > observable(5c) in")
-    print("     difficulty mirrors Step 4 and points to targeting the observable (5c).")
+    print("     from-scratch PQC compiling does NOT beat Step-4's 14 CNOTs.")
+    print("   * The relaxation ladder unitary > state > observable in")
+    print("     difficulty mirrors Step 4 and points to targeting the observable.")
 
     # ---- figure ----------------------------------------------------------
     fig, axes = plt.subplots(1, 2, figsize=(12, 4.6))
 
     ax = axes[0]
     ax.plot(BUDGETS, [res["5a"][B][0] for B in BUDGETS], "-o", color="C0",
-            label="5a: full unitary (global cost)")
+            label="full unitary (global cost)")
     ax.plot(BUDGETS, [res["5a_lhst"][B] for B in BUDGETS], "--^", color="C3",
-            label="5a: full unitary (LHST local cost)")
+            label="full unitary (LHST local cost)")
     ax.plot(BUDGETS, [res["5b"][B][0] for B in BUDGETS], "-s", color="C1",
-            label="5b: anc-|0> isometry (anc-|0>)")
+            label="anc-|0> isometry")
     ax.axvline(16, color="0.6", ls=":", lw=1)
     ax.text(16.1, 0.05, "16 = exact\n(textbook)", fontsize=8, va="bottom")
     ax.set_xlabel("CNOT budget  B")
@@ -137,9 +138,9 @@ def run(restarts=16):
 
     ax = axes[1]
     ax.semilogy(BUDGETS, [max(res["5a"][B][1], 1e-16) for B in BUDGETS], "-o",
-                color="C0", label="5a: full unitary")
+                color="C0", label="full unitary")
     ax.semilogy(BUDGETS, [max(res["5b"][B][1], 1e-16) for B in BUDGETS], "-s",
-                color="C1", label="5b: anc-|0> isometry")
+                color="C1", label="anc-|0> isometry")
     ax.set_xlabel("CNOT budget  B")
     ax.set_ylabel(r"worst $|F_{PQC}-F_{exact}|$ over $\varepsilon$")
     ax.set_title("(b) Operational error stays large (compiling failed)")

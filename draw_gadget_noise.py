@@ -1,5 +1,5 @@
 """
-Draw the Step 3a gadget: 3-qubit global depolarizing after each CSWAP.
+Draw the Step 2 gadget: 3-qubit global depolarizing after each CSWAP.
 =====================================================================
 
 Wires: 0 = ancilla a, [1,2] = register A (kept), [3,4] = register B (discarded).
@@ -41,7 +41,7 @@ def main():
     rho_AB = np.kron(make_noisy_bell(0.40), make_noisy_bell(0.40))
     fig, ax = qml.draw_mpl(_gadget, decimals=None, style="pennylane",
                            wire_order=[0, 1, 2, 3, 4])(rho_AB, G)
-    ax.set_title("Step 3a: 3-qubit global depolarizing (QubitChannel) after each CSWAP\n"
+    ax.set_title("Step 2: 3-qubit global depolarizing (QubitChannel) after each CSWAP\n"
                  "wires: 0=ancilla, [1,2]=register A (kept), [3,4]=register B",
                  fontsize=10)
     fig.savefig("circuit_gadget_noise.png", dpi=150, bbox_inches="tight")

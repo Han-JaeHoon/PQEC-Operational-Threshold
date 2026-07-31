@@ -1,8 +1,8 @@
 """
-Step 4a — CNOT-noise threshold of the optimized 14-CNOT gadget (PennyLane).
+Step 4 — CNOT-noise threshold of the optimized 14-CNOT gadget (PennyLane).
 ==========================================================================
 
-Step 4a reduced the SWAP-test gadget  H_a . CSWAP(0;1,3) . CSWAP(0;2,4) . H_a  from 16
+Step 4 reduced the SWAP-test gadget  H_a . CSWAP(0;1,3) . CSWAP(0;2,4) . H_a  from 16
 to 14 CNOTs while keeping the *exact* unitary (resynthesize_gadget.py, via Qiskit).
 That established unitary equivalence but NOT the operational threshold: fewer CNOTs
 usually help, but the threshold also depends on where the CNOTs sit and how errors
@@ -13,13 +13,14 @@ is hard-coded below as `GATES`, so this analysis is pure PennyLane and reproduci
 without Qiskit.  We (1) verify the PennyLane replay is unitarily IDENTICAL to the
 gadget U (Hilbert-Schmidt overlap = 1 up to global phase), then (2) put a 2-qubit
 depolarizing channel of strength eps2 after EACH of the 14 CNOTs (single-qubit gates
-ideal -- the same CNOT-only convention as Step 3b/4b) and find the threshold eps2*(eps)
-where the purified fidelity  F = <Z_a (x) O> / <Z_a>  drops to  F_bare = (1+3t)/4.
+ideal -- the same CNOT-only convention as Step 3 / the destructive gadget) and find the
+threshold eps2*(eps) where the purified fidelity  F = <Z_a (x) O> / <Z_a>  drops to
+F_bare = (1+3t)/4.
 
 We compare three gadgets under the identical noise convention:
   * textbook controlled-SWAP  (16 CNOTs)  -- eps2* from pqec_cnot_threshold
-  * optimized Step 4a          (14 CNOTs)  -- computed here
-  * destructive Step 4b        ( 2 CNOTs)  -- threshold_dest_closed
+  * optimized Step 4          (14 CNOTs)  -- computed here
+  * destructive gadget         ( 2 CNOTs)  -- threshold_dest_closed  (auxiliary)
 
 Run:  python pqec_resynth_noise.py
 """
@@ -149,7 +150,7 @@ def threshold_resynth(eps, hi=0.6):
 # ===========================================================================
 def main():
     print("=" * 80)
-    print(f" Step 4a -- CNOT-noise threshold of the optimized {N_CX}-CNOT gadget (PennyLane)")
+    print(f" Step 4 -- CNOT-noise threshold of the optimized {N_CX}-CNOT gadget (PennyLane)")
     print("=" * 80)
 
     # (0) the PennyLane replay is unitarily identical to U
@@ -169,9 +170,9 @@ def main():
         up = max(up, max(Fs[i + 1] - Fs[i] for i in range(len(Fs) - 1)))
     print(f" (2) F(eps2) max upward step over eps in (0.2,0.4,0.6): {up:+.5f}  (<=0 monotone)")
 
-    # (3) threshold table: Step 4a (14) vs textbook (16) vs Step 4b (2)
+    # (3) threshold table: Step 4 (14) vs textbook (16) vs destructive (2)
     print("\n (3) CNOT-noise threshold eps2* (single-qubit gates ideal):")
-    print(f"     {'eps':>5} | {'textbook(16)':>12} {'Step4a(14)':>11} {'Step4b(2)':>10} | "
+    print(f"     {'eps':>5} | {'textbook(16)':>12} {'Step4(14)':>11} {'dest(2)':>10} | "
           f"{'14/16':>6}")
     EPS = [0.10, 0.20, 0.30, 0.40, 0.50, 0.60]
     rows = []
@@ -184,8 +185,8 @@ def main():
         print(f"     {e:>5.2f} | {t16:>12.4f} {t14:>11.4f} {t2:>10.4f} | {ratio:>6.2f}")
 
     print("\n  Reading it:")
-    print("   * Step 4a (14) keeps the EXACT gadget unitary, so it is a coherent")
-    print("     purified-state gadget (unlike the measurement-only Step 4b).")
+    print("   * Step 4 (14) keeps the EXACT gadget unitary, so it is a coherent")
+    print("     purified-state gadget (unlike the measurement-only destructive gadget).")
     print("   * Whether 14 CNOTs beat 16 for the threshold is now computed, not assumed.")
 
     # ---- figure ----------------------------------------------------------
@@ -195,7 +196,7 @@ def main():
     e0 = 0.40
     e2s = np.linspace(0, 0.35, 60)
     ax.plot(e2s, [F_resynth(e0, x) for x in e2s], "-", color="C0", lw=2,
-            label="Step 4a (14 CNOT)")
+            label="Step 4 (14 CNOT)")
     ax.axhline(F_bare(e0), color="0.5", ls=":", lw=1)
     ax.text(0.0, F_bare(e0) + .003, "no-QEC $F_{bare}$", fontsize=8)
     ax.axhline(F_exact(e0), color="0.5", ls="--", lw=1)
@@ -210,8 +211,8 @@ def main():
 
     ax = axes[1]
     E = [r[0] for r in rows]
-    ax.plot(E, [r[3] for r in rows], "-d", color="C3", label="Step 4b: destructive (2)")
-    ax.plot(E, [r[2] for r in rows], "-o", color="C0", label=f"Step 4a: optimized ({N_CX})")
+    ax.plot(E, [r[3] for r in rows], "-d", color="C3", label="destructive (2, auxiliary)")
+    ax.plot(E, [r[2] for r in rows], "-o", color="C0", label=f"Step 4: optimized ({N_CX})")
     ax.plot(E, [r[1] for r in rows], "-^", color="C2", label="textbook cSWAP (16)")
     ax.set_xlabel(r"input noise  $\varepsilon$")
     ax.set_ylabel(r"CNOT-noise threshold  $\varepsilon_2^*$")

@@ -1,18 +1,18 @@
 """
-Step 5c -- noise-aware variational training of the purified OBSERVABLE.
-======================================================================
+Auxiliary -- noise-aware variational training of the purified OBSERVABLE.
+========================================================================
 
-Steps 5a/5b tried to reproduce the gadget UNITARY / ancilla-|0> ISOMETRY and failed to
-an expressibility/trainability squeeze.  Here we relax all the way to the operationally
-relevant
+(Not part of the main linear flow.)  The generic-ansatz attempts to reproduce the gadget
+UNITARY / ancilla-|0> ISOMETRY failed to an expressibility/trainability squeeze.  Here we
+relax all the way to the operationally relevant
 quantity -- the purified observable
 
     F(eps) = Tr(O rho_eps^2) / Tr(rho_eps^2)          (read as <Z_a (x) O>/<Z_a>)
 
 for O in {|Phi+><Phi+|, ZZ}.  This is a low-dimensional target (a handful of numbers
-per eps), so it trains easily even at a SMALL CNOT budget -- unlike 5a/5b.
+per eps), so it trains easily even at a SMALL CNOT budget -- unlike the unitary/isometry.
 
-The novel question (this is what 5c is *for*): at a FIXED ansatz with a FIXED CNOT
+The novel question (this is what the observable study is *for*): at a FIXED ansatz with a FIXED CNOT
 count, does training that INCLUDES the CNOT depolarizing channel (eps2 after each
 CNOT) yield a HIGHER operational threshold than training noise-free and deploying?
 This isolates "noise-aware compilation" from the trivial "fewer CNOTs = less noise".
@@ -23,7 +23,7 @@ via F > F_bare = (1+3t)/4):
   * theta_free   : trained at eps2 = 0            (noise-free), then deployed noisy
   * theta_aware  : trained at eps2 = EPS2_TRAIN   (noise in the loss), init from free
   * textbook     : 16-CNOT controlled-SWAP gadget threshold  (pqec_cnot_threshold)
-  * Step 4b      : 2-CNOT destructive gadget threshold        (destructive_gadget)
+  * destructive  : 2-CNOT destructive gadget threshold        (destructive_gadget)
 
 Convention: 2-qubit global depolarizing (1-eps2) rho + eps2 I/4 after each CNOT
 (global_depol_kraus), single-qubit gates ideal -- identical to the CNOT-only study.
@@ -131,7 +131,7 @@ def threshold(Fval, params, eps, hi=0.6):
 
 def run():
     print("=" * 82)
-    print(f" Step 5c -- noise-aware training of the purified observable  (B={BUDGET} CNOTs)")
+    print(f" Auxiliary -- noise-aware training of the purified observable  (B={BUDGET} CNOTs)")
     print("=" * 82)
     ops, npar, loss, Fval, denom = build()
     t0 = time.time()
@@ -176,7 +176,7 @@ def run():
     # (3) operational thresholds eps2*  vs input noise eps
     print("\n (3) CNOT-noise threshold eps2* (F_PQC = F_bare):")
     print(f"     {'eps':>5} | {'free(B=6)':>10} {'aware(B=6)':>11} | "
-          f"{'textbook(16)':>12} {'Step4b(2)':>10}")
+          f"{'textbook(16)':>12} {'dest(2)':>10}")
     rows = []
     for e in EPS_EVAL:
         tf = threshold(Fval, th_free, e)
@@ -190,7 +190,7 @@ def run():
     print("\n  Findings:")
     print(f"   * POSITIVE: theta_free (B=6) beats the 16-CNOT textbook at every eps")
     print(f"     ({rows[0][1]:.3f}->{rows[-1][1]:.3f} vs {rows[0][3]:.3f}->{rows[-1][3]:.3f})")
-    print(f"     and approaches the exact 2-CNOT Step-4b reference "
+    print(f"     and approaches the exact 2-CNOT destructive reference "
           f"({rows[0][4]:.3f}->{rows[-1][4]:.3f}) -- purely the 'fewer noisy CNOTs' effect.")
     print(f"   * NEGATIVE: noise-aware training does NOT help "
           f"(mean threshold change {dgain:+.3f}).")
@@ -225,8 +225,8 @@ def run():
 
     ax = axes[1]
     E = [r[0] for r in rows]
-    ax.plot(E, [r[4] for r in rows], "-d", color="C3", label="Step 4b: destructive (2 CNOT)")
-    ax.plot(E, [r[1] for r in rows], "-o", color="C0", label="Step 5c: PQC $\\theta_{free}$ (6 CNOT)")
+    ax.plot(E, [r[4] for r in rows], "-d", color="C3", label="destructive (2 CNOT, auxiliary)")
+    ax.plot(E, [r[1] for r in rows], "-o", color="C0", label="PQC $\\theta_{free}$ (6 CNOT)")
     ax.plot(E, [r[3] for r in rows], "-^", color="C2", label="textbook cSWAP (16 CNOT)")
     ax.fill_between(E, [r[3] for r in rows], [r[1] for r in rows], color="C0", alpha=.08)
     ax.set_xlabel(r"input noise  $\varepsilon$")

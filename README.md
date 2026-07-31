@@ -20,17 +20,24 @@ state and the tooling to certify it, before adding the (noisy) purification gadg
 
 ## Status
 
+**Main linear flow** (coherent PQEC / entanglement distillation):
+
 | Step | Item | State |
 |------|------|-------|
-| 1 | Noisy input state `ρ_ε` — genuine preparation circuit + verification | **done** |
-| 2 | Purification (SWAP-test) gadget — ideal, verified on `ρ_ε` | **done** |
-| 3a | Fredkin **global** depolarizing — analytic benchmark (no threshold) | **done** |
-| 3b | **Decomposed** Fredkin, **CNOT-only** noise — operational threshold `ε₂*` | **done** |
-| 4a | Unitary-preserving CNOT reduction (16→14, verified) + CNOT-noise threshold (1.25–1.42× over 16-CNOT) | **done** |
-| 4b | Destructive/VD gadget (2 CNOTs), closed form, ~2.7–4.4× higher threshold | **done** |
-| 5a | Variational (PQC) compiling of the gadget unitary — **exact at 18 CNOTs** (gadget-matched RX-RY-RZ ansatz); prunes to **14** (=Step 4a; 13 impossible); learned 14-CNOT threshold **~1.5–1.9× Step 4a** | **done** |
-| 5b | Ancilla-`\|0⟩` isometry compiling — same-ansatz learn-then-prune floor is also **14** (relaxing to the coherent state saves no CNOTs) | **done** |
-| 5c | Purified observable — noise-aware training (specialized estimator); same-ansatz prune of the 14-CNOT circuit under the ancilla-parity cost floors at **5** (structured destructive = 2) | **done** |
+| Setup | Bell-isotropic input `ρ_ε` — genuine preparation circuit + verification | **done** |
+| 1 | Ideal one-round PQEC baseline (SWAP-test gadget), verified on `ρ_ε` | **done** |
+| 2 | Fredkin-level **global** replacement depolarizing noise — analytic benchmark (no threshold) | **done** |
+| 3 | Textbook **16-CNOT** implementation with **per-CNOT** noise — operational threshold `ε₂*` | **done** |
+| 4 | Resynthesized **14-CNOT** implementation (16→14, verified) with per-CNOT noise — threshold 1.25–1.42× over 16-CNOT | **done** |
+| 5 | Learned & pruned **14-CNOT** implementation (gadget-matched PQC) with per-CNOT noise — threshold ~1.5–1.9× over Step 4 | **done** |
+
+**Auxiliary comparisons** (not part of the main linear flow; kept for reference):
+
+| Item | Note | State |
+|------|------|-------|
+| Destructive / VD 2-CNOT gadget | closed form, ~2.7–4.4× higher threshold (measurement-only read-out) | **done** |
+| Isometry compiling / pruning | same-ansatz learn-then-prune floor is also **14** CNOTs (relaxing to the coherent state saves nothing) | **done** |
+| Observable pruning + noise-aware training | 14-CNOT → **5** under the ancilla-parity cost; noise-aware training adds no threshold gain | **done** |
 
 ## The noisy input state
 
@@ -53,7 +60,7 @@ Key closed forms (all checked by the verification code):
 - purity `Tr(ρ_ε²) = (1 − 3ε/4)² + 3(ε/4)²`
 - `ρ_ε` is entangled iff `F > 1/2`, i.e. `ε < 2/3`
 
-## The purification gadget (Step 2)
+## The purification gadget (Step 1)
 
 The PQEC primitive is the **SWAP-test gadget**: two identical noisy copies
 `ρ ⊗ ρ` enter, an ancilla-controlled SWAP (for the 2-qubit register, two parallel
@@ -66,7 +73,7 @@ P(ρ) = ρ² / Tr[ρ²]        (concentrates weight on the dominant eigenvector)
 ![PQEC SWAP-test gadget](circuit_pqec_gadget.png)
 
 The gadget is implemented as a genuine 5-wire circuit with two equivalent
-read-outs (both used when the gadget is made noisy in Step 3):
+read-outs (both used when the gadget is made noisy in Steps 2–4):
 
 - **state extraction** (Eq. 9): `ρ² = (ancilla |0⟩ block) − (|1⟩ block)`, so
   `purify_once(ρ)` returns `ρ²/Tr[ρ²]`;
@@ -82,7 +89,7 @@ separable input** (`2/3 ≤ ε < 1`); only `ρ = I/4` at `ε = 1` is a fixed poi
 
 ![recovery over rounds](pqec_gadget_recovery.png)
 
-## Noise on the gadget (Step 3a): Fredkin global depolarizing
+## Noise on the gadget (Step 2): Fredkin global depolarizing
 
 First noisy-gadget model — right after each Fredkin, a **3-qubit global
 depolarizing channel** of strength `g_F` on the three qubits it touched (ancilla
@@ -102,15 +109,15 @@ verified against the circuit to `~1e-13`. A hand derivation
 (ordering `(a,A1,A2,B1,B2)`, closed forms after every gate) is reproduced
 step-by-step by the circuit to `~1e-16` in `verify_note_states.py`.
 
-![Step 3a circuit](circuit_gadget_noise.png)
+![Step 2 circuit](circuit_gadget_noise.png)
 
 ![global-depol benchmark](global_depol_benchmark.png)
 
 A real operational threshold needs noise that attenuates numerator and denominator
 **asymmetrically** (e.g. noise on the CNOTs of a decomposed Fredkin) — that is
-Step 3b.
+Step 3.
 
-## CNOT noise on a decomposed Fredkin (Step 3b)
+## CNOT noise on a decomposed Fredkin (Step 3)
 
 > Full write-up with variable definitions and the theory/implementation split:
 > **[`CNOT_NOISE_ANALYSIS.md`](CNOT_NOISE_ANALYSIS.md)**.
@@ -125,7 +132,7 @@ Smolin–DiVincenzo PRA 53, 2855 (1996); 7-CNOT Cruz–Murta arXiv:2305.18128 �
 possible follow-up under the same model.)
 
 **Result: a finite operational threshold `ε₂*` appears.** Unlike the 3-qubit global
-depolarizing of Step 3a (which cancels in the ratio), CNOT noise attenuates the parity
+depolarizing of Step 2 (which cancels in the ratio), CNOT noise attenuates the parity
 numerator and denominator by **different** `t`-dependent factors, so `F` falls with
 `ε₂` and crosses the no-QEC baseline at a finite `ε₂*`. Exact closed form (verified on
 the circuit to `~1e-14`), with `v = 1−ε₂` and `t = 1−ε`:
@@ -169,15 +176,16 @@ register A, [3,4] = discarded register B):
 
 ![SWAP test, CNOT-only noise](circuit_swaptest_cnot_noise.png)
 
-### Reducing the gadget's CNOT count (Step 4)
+### Step 4 — resynthesized 14-CNOT implementation
 
 Full write-up: **[`SWAP_GADGET_OPTIMIZATION.md`](SWAP_GADGET_OPTIMIZATION.md)**.
 
 **Why bother.** The two Fredkins decompose into **16 CNOTs**, and CNOTs are where the
-gate noise lives. Can we do the *same job* with fewer CNOTs? "Same job" has two
-meanings, and we did both.
+gate noise lives. Can we do the *same job* with fewer CNOTs while **keeping the exact
+gadget unitary**? (An auxiliary route that keeps only the measured answer — the 2-CNOT
+destructive gadget — is compared separately below.)
 
-**Step 4a — keep the exact circuit** ([`resynthesize_gadget.py`](resynthesize_gadget.py)).
+**Keep the exact circuit** ([`resynthesize_gadget.py`](resynthesize_gadget.py)).
 The gadget `H·CSWAP·CSWAP·H` is a fixed 5-qubit unitary. Two peephole optimizers
 (Qiskit, pytket) reduce it **16 → 14 CNOTs**, each checked to implement the *identical*
 unitary. `14 = 2×7` (the per-Fredkin optimum). Safe but modest — the coherent gadget is
@@ -189,7 +197,7 @@ The machine-optimized 14-CNOT circuit, re-implemented **identically in PennyLane
 radians), the 14 dot + ⊕ links are the CNOTs. The threshold analysis inserts a 2-qubit
 depolarizing `ε₂` after each CNOT:
 
-![Step 4a 14-CNOT gadget (PennyLane)](circuit_resynth_pennylane.png)
+![Step 4 14-CNOT gadget (PennyLane)](circuit_resynth_pennylane.png)
 
 *Threshold (computed, not assumed).* This exact 14-CNOT circuit is re-implemented
 identically in PennyLane ([`pqec_resynth_noise.py`](pqec_resynth_noise.py); overlap with
@@ -201,11 +209,14 @@ machine-found layout also propagates noise a bit more favourably:
 | input `ε` | 0.10 | 0.20 | 0.30 | 0.40 | 0.50 | 0.60 |
 |-----------|------|------|------|------|------|------|
 | textbook cSWAP (16) `ε₂*` | 0.033 | 0.061 | 0.085 | 0.103 | 0.117 | 0.126 |
-| **Step 4a (14) `ε₂*`** | **0.041** | **0.079** | **0.112** | **0.140** | **0.162** | **0.178** |
+| **Step 4 (14) `ε₂*`** | **0.041** | **0.079** | **0.112** | **0.140** | **0.162** | **0.178** |
 
-![Step 4a threshold vs textbook and destructive](pqec_resynth_threshold.png)
+![Step 4 threshold vs textbook and destructive](pqec_resynth_threshold.png)
 
-**Step 4b — keep only the answer** ([`destructive_gadget.py`](destructive_gadget.py)).
+#### Auxiliary comparison — destructive / VD 2-CNOT gadget
+
+*Not part of the main linear flow; kept as a low-CNOT reference baseline.*
+([`destructive_gadget.py`](destructive_gadget.py)).
 PQEC never needs the SWAP *unitary* — it needs one number, `F = Tr(Oρ²)/Tr(ρ²)`, which
 is the **expectation value of the SWAP operator** on the two copies. Instead of
 *applying* a controlled-SWAP (16 CNOTs), you can *measure* SWAP directly: rotate each
@@ -240,41 +251,29 @@ is a *per-setting* cost; (iii) the destructive gadget is **measurement-only** (r
 `⟨O⟩`, not a coherent purified state) — an alternative *measurement* of the
 virtual-distillation estimator, matching the paper's VD framing.
 
-### Approximating the gadget with a trained PQC (Step 5)
+### Step 5 — learned & pruned 14-CNOT implementation
 
 Full write-up: **[`PQC_APPROX.md`](PQC_APPROX.md)**.
 
-Step 4 reduced the CNOT count *exactly*. Step 5 asks the *learned* version: can a
-parameterized quantum circuit (PQC) be **trained** to play the gadget's role with
-fewer CNOTs? As in Step 4, "role" has a ladder of meanings, and we did all three —
-reproduce the **unitary** (5a), the **ancilla-`|0⟩` isometry** on the physical input
-(5b), or just the purified **observable**, noise-aware (5c). The ansatz has a CNOT
-budget `B` as its knob; the same ansatz runs as a fast numpy unitary (5a/5b) and as a
-noisy `default.mixed` circuit (5c), verified identical to machine precision.
+Step 4 reduced the CNOT count *exactly* by peephole resynthesis. Step 5 asks the
+*learned* version: can a parameterized quantum circuit (PQC) be **trained** to compile
+the gadget unitary `U = H_a·CSWAP·CSWAP·H_a`, and how few CNOTs does the trained-then-pruned
+circuit need? The main result is a gadget-matched RX-RY-RZ PQC that compiles `U` exactly
+and prunes to **14 CNOTs**, whose per-CNOT-noise threshold is analysed below. (Auxiliary
+relaxations — the isometry and the observable — are compared separately at the end of
+this section.)
 
-**Steps 5a/5b — an expressibility/trainability squeeze.** Compiling the gadget
-*unitary* (5a) or *isometry* (5b) from scratch fails: with **exact** analytic
-gradients, many restarts, the plateau-mitigating **LHST** local cost, and rich ansätze
-up to **375 params / 24 CNOTs**, the best infidelity floors around `δ ≈ 0.44` (5a) /
-`0.29` (5b). A **teacher–student** test (`test_inclass.py`) pins down *why* — recompile
-a target that is reachable by construction, and see if the optimizer finds it:
+> **Auxiliary background — generic ansätze hit an expressibility/trainability squeeze.**
+> Compiling `U` (or its isometry) from scratch with *generic* ansätze fails: with exact
+> analytic gradients, many restarts, the plateau-mitigating **LHST** local cost, and rich
+> ansätze up to 375 params / 24 CNOTs, the best infidelity floors around `δ ≈ 0.44`. A
+> teacher–student test (`test_inclass.py`) shows this is a squeeze **specific to those
+> generic ansätze** (trainable-but-not-expressive at low depth; expressive-but-not-trainable
+> at high depth), **not** a claim the gadget is uncompilable — the gadget-matched ansatz
+> below *does* compile it. Figure: `pqc_compile_pareto.png`.
 
-- `B=12`: reachable targets recompile to `~1e-15` (optimizer is fine), yet `U` is
-  unreached → **expressibility** (this fixed CNOT topology can't hold `U` at 12);
-- `B=20`: even reachable targets fail (`δ≈0.8`) → genuine **barren-plateau/trainability**
-  barrier (`B=16` is the transition).
-
-So where the ansatz is *trainable* it isn't *expressive enough*, and where it might be
-expressive the optimizer can't navigate — a squeeze **specific to these generic
-ansätze**. Crucially this is an ansatz limitation, **not** a claim the gadget is
-uncompilable — with the right ansatz it *does* compile (next). 5b is consistently
-easier than 5a — the same relaxation ladder as Step 4.
-
-![variational compiling squeeze](pqc_compile_pareto.png)
-
-**Step 5a — it CAN be done with the right ansatz** ([`pqc_ring_ansatz.py`](pqc_ring_ansatz.py)).
-The obstruction above was the ansatz. Fixing three things makes an RX-RY-RZ PQC compile
-`U` to machine precision:
+**The gadget-matched ansatz compiles `U`** ([`pqc_ring_ansatz.py`](pqc_ring_ansatz.py)).
+Fixing three things makes an RX-RY-RZ PQC compile `U` to machine precision:
 1. **gadget-matched connectivity** `(0,1)(0,3)(1,3)(0,2)(0,4)(2,4)` — ancilla to both
    registers + the swap pairs (a linear chain `0-1-2-3-4` cannot express `U` even at
    20 CNOTs; the teacher–student test shows this is expressibility);
@@ -283,31 +282,30 @@ The obstruction above was the ansatz. Fixing three things makes an RX-RY-RZ PQC 
 
 **Pruning to 14** ([`pqc_ring_prune.py`](pqc_ring_prune.py)). Greedily removing CNOTs
 from the exact 18-CNOT solution (warm-started) reaches **14 CNOTs, still exact** — the
-*same* count as Step 4a and the `2×7` per-Fredkin optimum. **13 is unreachable**: every
+*same* count as Step 4 and the `2×7` per-Fredkin optimum. **13 is unreachable**: every
 single removal leaves `δ ≥ 0.15` ([`reach13.py`](reach13.py)). So learn-then-prune and
 peephole optimization independently converge to 14.
 
 The learned 14-CNOT circuit (consecutive rotation layers merged into one net `Rot =
 RZ·RY·RZ` per wire between CNOTs; drawn form verified equal to the stored solution to
-machine precision). The **same** circuit realizes the 5b isometry exactly, so it is both
-the 5a and the 5b circuit:
+machine precision):
 
-![Step 5a/5b learned 14-CNOT circuit](circuit_pqc_5a.png)
+![Step 5 learned 14-CNOT circuit](circuit_pqc_5a.png)
 
 The same circuit in its **exact primitive `RX`-`RY`-`RZ` + CNOT form** (as trained: an
 initial RX-RY-RZ layer plus a full RX-RY-RZ layer after every CNOT slot — 19 rotation
 layers, 285 parameters; the compact view above merges each inter-CNOT run into one net
 `Rot`). Best viewed zoomed in:
 
-![Step 5a/5b 14-CNOT circuit, RX-RY-RZ primitive form](circuit_pqc_5a_raw.png)
+![Step 5 14-CNOT circuit, RX-RY-RZ primitive form](circuit_pqc_5a_raw.png)
 
 **The arrangement — not the count — sets the noise threshold**
 ([`pqc_ring_threshold.py`](pqc_ring_threshold.py)). Putting `ε₂` on each of the learned
-14 CNOTs (single-qubit gates ideal) gives a threshold **~1.5–1.9× higher than Step 4a's
+14 CNOTs (single-qubit gates ideal) gives a threshold **~1.5–1.9× higher than Step 4's
 14-CNOT circuit**, nearly reaching the 2-CNOT destructive gadget at high input noise —
 even though both are exact 14-CNOT realizations of the same `U`:
 
-| input `ε` | textbook (16) | Step 4a (14) | **learned (14)** | dest (2) |
+| input `ε` | textbook (16) | Step 4 (14) | **learned (14)** | dest (2) |
 |-----------|:---:|:---:|:---:|:---:|
 | 0.10 | 0.033 | 0.041 | **0.060** | 0.146 |
 | 0.40 | 0.103 | 0.140 | **0.237** | 0.313 |
@@ -319,35 +317,36 @@ So CNOT **count alone does not set the operational threshold — the arrangement
 with ~2× of room at fixed count. (The robustness is emergent: the circuit was trained
 and pruned noise-free.)
 
-**The relaxation ladder on one footing (5a / 5b / 5c).** Running the *same*
-learn-then-prune down the weaker targets shows *where* CNOT savings appear. The isometry
+#### Auxiliary comparisons — isometry and observable relaxations
+
+*Not part of the main linear flow; kept to show **where** CNOT savings come from.*
+Running the *same* learn-then-prune down weaker targets: the **isometry**
 ([`pqc_ring_5b.py`](pqc_ring_5b.py)) prunes to **14** — the same as the full unitary, so
 relaxing unitary → coherent-state saves nothing. Only relaxing to the **observable**
 ([`pqc_ring_5c.py`](pqc_ring_5c.py), pruning the 14-CNOT circuit under the ancilla-parity
 correlator cost) collapses the count to **5**, and the structured destructive read-out
-(Step 4b) reaches **2**:
+(the 2-CNOT reference) reaches **2**:
 
-| rung | target | min CNOTs |
-|--|--|:--:|
-| 5a | full unitary `U` | **14** (13 impossible) |
-| 5b | ancilla-`\|0⟩` isometry `U₀` | **14** (= 5a) |
-| 5c | observable `F`, ancilla-parity | **5** |
-| — | observable `F`, structured destructive (Step 4b) | **2** |
+| target the circuit reproduces | min CNOTs |
+|--|:--:|
+| full unitary `U` | **14** (13 impossible) |
+| ancilla-`\|0⟩` isometry `U₀` | **14** (same as the unitary) |
+| observable `F`, ancilla-parity read-out | **5** |
+| observable `F`, structured destructive read-out (2-CNOT reference) | **2** |
 
-This reproduces the Step-4 lesson by training: **relax the requirement to the observable,
-not to the state.**
+The lesson mirrors Step 4: **the CNOT savings come from relaxing to the observable, not
+from relaxing to the state.** The learned observable circuit — pruned from the 14-CNOT
+circuit under the ancilla-parity cost — needs only **5 CNOTs** (same merged `Rot`
+rendering):
 
-The learned 5c circuit — pruned from the 14-CNOT circuit under the ancilla-parity
-observable cost — needs only **5 CNOTs** (same merged `Rot` rendering):
-
-![Step 5c learned 5-CNOT circuit](circuit_pqc_5c.png)
+![observable-relaxation learned 5-CNOT circuit](circuit_pqc_5c.png)
 
 Exact gate lists and merged per-block SU(2) matrices for both circuits (for an
 independent analytic check of the observable propagation) are in
 [`PQC_CIRCUITS_FOR_ANALYSIS.md`](PQC_CIRCUITS_FOR_ANALYSIS.md), generated by
 [`draw_pqc_5abc.py`](draw_pqc_5abc.py).
 
-**Step 5c — noise-aware observable training (the useful route).** Relaxing to the
+**Noise-aware observable training.** Relaxing to the
 operational scalar `F(ε)` (matched for `O ∈ {|Φ⁺⟩⟨Φ⁺|, ZZ}`) is a low-dimensional,
 plateau-free target that trains easily at a **small** budget (`B=6`). To avoid a
 degeneracy we match the ancilla-parity **correlators** `⟨Z_a⟩ = Tr(ρ²)` and
@@ -358,18 +357,18 @@ denominator to zero and fake any value, even `F > 1`).
 over a dense unseen `ε` grid it matches `F_exact` to `0.0014` (`Φ⁺`) / `0.0021` (`ZZ`)
 — but **not across observables**: unseen `XX, YY` are off by `~0.13`. So it is a
 **learned estimator specialized to the Bell-isotropic inputs and `{Φ⁺, ZZ}`**, not a
-general observable-equivalent gadget (Step 4b is exact for all `O`). The threshold
+general observable-equivalent gadget (the destructive 2-CNOT gadget is exact for all `O`). The threshold
 uses `O = Φ⁺` only and `F(ε₂)` is verified monotone, so the numbers below stand.
 
 **Positive result — fewer CNOTs lift the threshold.** `θ_free` matches `F_exact(ε)` to
 `~0.001` at `B = 6` CNOTs, and deployed under CNOT noise it **beats the 16-CNOT
-textbook** at every input noise, approaching the exact 2-CNOT Step-4b reference:
+textbook** at every input noise, approaching the exact 2-CNOT destructive reference:
 
 | input `ε` | 0.10 | 0.20 | 0.30 | 0.40 | 0.50 | 0.60 |
 |-----------|------|------|------|------|------|------|
 | textbook cSWAP (16) `ε₂*` | 0.033 | 0.061 | 0.085 | 0.103 | 0.117 | 0.126 |
 | **PQC `θ_free` (6) `ε₂*`** | **0.051** | **0.100** | **0.148** | **0.194** | **0.236** | **0.273** |
-| Step 4b destructive (2) `ε₂*` | 0.146 | 0.229 | 0.280 | 0.313 | 0.333 | 0.343 |
+| destructive (2-CNOT reference) `ε₂*` | 0.146 | 0.229 | 0.280 | 0.313 | 0.333 | 0.343 |
 
 **Negative result — noise-aware training adds nothing (here).** Baking the CNOT noise
 into the loss gives **no threshold gain** for the objectives we tried: matching the
@@ -379,7 +378,7 @@ noise). This is consistent with the noise being **unital** (it can't be *inverte
 unitary re-parameterization) — but it is an **empirical negative, not a proof of
 impossibility**: other objectives (e.g. a denominator-constrained margin objective) we
 did not try. On this problem **the win is structural (fewer CNOTs), as in Step 4** —
-reinforcing that the destructive Step-4b gadget, not a learned one, is the right
+reinforcing that the destructive 2-CNOT gadget, not a learned one, is the right
 low-CNOT tool.
 
 ![noise-aware PQC threshold](pqc_noise_aware.png)
@@ -393,7 +392,7 @@ low-CNOT tool.
 | [`pqec_gadget.py`](pqec_gadget.py) | Ideal SWAP-test gadget: `purify_once` / `purify_rounds` / `obs_purified`, verification, and the `ρ_ε` recovery demo |
 | [`draw_pqec_gadget.py`](draw_pqec_gadget.py) | Draws the 5-wire gadget (`circuit_pqec_gadget.png`) |
 | [`pqec_gadget_noise.py`](pqec_gadget_noise.py) | Fredkin **global** depolarizing `g_F`: noisy gadget, `obs_pqec_noisy`, effective state |
-| [`draw_gadget_noise.py`](draw_gadget_noise.py) | Draws the Step 3a gadget (`circuit_gadget_noise.png`) |
+| [`draw_gadget_noise.py`](draw_gadget_noise.py) | Draws the Step 2 gadget (`circuit_gadget_noise.png`) |
 | [`verify_analytic_global_depol.py`](verify_analytic_global_depol.py) | Verifies the analytic global-depol formulas against the circuit (`~1e-13`) |
 | [`verify_note_states.py`](verify_note_states.py) | Reproduces the note's step-by-step states (`σ₀…σ_out`) on the circuit (`~1e-16`) |
 | [`plot_global_depol_benchmark.py`](plot_global_depol_benchmark.py) | `F_PQEC` flatness + sampling divergence figure (`global_depol_benchmark.png`) |
@@ -401,25 +400,25 @@ low-CNOT tool.
 | [`draw_cnot_noise.py`](draw_cnot_noise.py) | Draws the CNOT-only diagrams: CSWAP decomposition, SWAP test, and SWAP test with 2-qubit depol after each CNOT (barrier-separated stages) |
 | [`pqec_cnot_threshold.py`](pqec_cnot_threshold.py) | CNOT-only threshold `ε₂*` (single-qubit gates ideal): closed forms (`F`, `Q`, `N_Φ`, `c_⊥`, `c_z`), circuit checks incl. effective-state anisotropy, threshold table + figure |
 | [`CNOT_NOISE_ANALYSIS.md`](CNOT_NOISE_ANALYSIS.md) | Full CNOT-only note: notation/variable definitions, theory (Part I), implementation & verification (Part II) |
-| [`resynthesize_gadget.py`](resynthesize_gadget.py) | Step 4a: unitary-preserving CNOT reduction of the gadget (Qiskit/pytket, 16→14, verified) |
-| [`draw_resynth_pl.py`](draw_resynth_pl.py) | Draws the PennyLane implementation of the Step-4a 14-CNOT circuit (`circuit_resynth_pennylane.png`) |
-| [`pqec_resynth_noise.py`](pqec_resynth_noise.py) | Step 4a **threshold**: pure-PennyLane replay of the 14-CNOT circuit (unitary-verified) + CNOT-noise threshold vs textbook/4b (`pqec_resynth_threshold.png`) |
-| [`destructive_gadget.py`](destructive_gadget.py) | Step 4b: destructive/VD gadget (2 CNOTs) — ideal-equivalence proof, closed form, CNOT-noise threshold vs controlled-SWAP; draws `circuit_destructive.png` + `destructive_gadget.png` |
+| [`resynthesize_gadget.py`](resynthesize_gadget.py) | Step 4: unitary-preserving CNOT reduction of the gadget (Qiskit/pytket, 16→14, verified) |
+| [`draw_resynth_pl.py`](draw_resynth_pl.py) | Draws the PennyLane implementation of the Step-4 14-CNOT circuit (`circuit_resynth_pennylane.png`) |
+| [`pqec_resynth_noise.py`](pqec_resynth_noise.py) | Step 4 **threshold**: pure-PennyLane replay of the 14-CNOT circuit (unitary-verified) + CNOT-noise threshold vs textbook / destructive (`pqec_resynth_threshold.png`) |
+| [`destructive_gadget.py`](destructive_gadget.py) | *Auxiliary:* destructive/VD gadget (2 CNOTs) — ideal-equivalence proof, closed form, CNOT-noise threshold vs controlled-SWAP; draws `circuit_destructive.png` + `destructive_gadget.png` |
 | [`SWAP_GADGET_OPTIMIZATION.md`](SWAP_GADGET_OPTIMIZATION.md) | Write-up of both CNOT-reduction routes (same-unitary 16→14; same-observable 2 CNOTs) |
 | [`pqc_common.py`](pqc_common.py) | Step 5 shared: target `U`, PQC ansatz, fast numpy unitary + **exact** gradients, LHST cost, PennyLane noisy executor, read-out, references (self-test) |
-| [`pqc_compile.py`](pqc_compile.py) | Step 5a/5b: variational compiling sweep (global + LHST costs); figure `pqc_compile_pareto.png` |
-| [`pqc_noise_aware.py`](pqc_noise_aware.py) | Step 5c: noise-aware observable training + threshold comparison; figure `pqc_noise_aware.png` |
-| [`test_inclass.py`](test_inclass.py) | teacher–student test: in-class recompilation isolating expressibility vs trainability by depth |
-| [`test_5c_oos.py`](test_5c_oos.py) | Step-5c out-of-sample check (unseen observables, dense `ε`, `F(ε₂)` monotonicity) |
-| [`pqc_ring_ansatz.py`](pqc_ring_ansatz.py) | Step 5a **success**: RX-RY-RZ ansätze; the gadget-matched, per-CNOT-rotation ansatz that compiles `U` exactly at 18 CNOTs; saves `pqc_ring_L3_params.npy` |
+| [`pqc_compile.py`](pqc_compile.py) | *Auxiliary:* generic-ansatz variational compiling sweep (global + LHST costs); figure `pqc_compile_pareto.png` |
+| [`pqc_noise_aware.py`](pqc_noise_aware.py) | *Auxiliary:* noise-aware observable training + threshold comparison; figure `pqc_noise_aware.png` |
+| [`test_inclass.py`](test_inclass.py) | *Auxiliary:* teacher–student test: in-class recompilation isolating expressibility vs trainability by depth |
+| [`test_5c_oos.py`](test_5c_oos.py) | *Auxiliary:* observable out-of-sample check (unseen observables, dense `ε`, `F(ε₂)` monotonicity) |
+| [`pqc_ring_ansatz.py`](pqc_ring_ansatz.py) | Step 5 **success**: RX-RY-RZ ansätze; the gadget-matched, per-CNOT-rotation ansatz that compiles `U` exactly at 18 CNOTs; saves `pqc_ring_L3_params.npy` |
 | [`pqc_ring_prune.py`](pqc_ring_prune.py) | Greedy CNOT pruning of the 18-CNOT solution → **14** (exact); saves `pqc_ring_pruned_*.{npy,json}` |
 | [`reach13.py`](reach13.py) | Rigorous test that **13 CNOTs is unreachable** (14 is the floor here) |
-| [`pqc_ring_threshold.py`](pqc_ring_threshold.py) | CNOT-noise threshold of the learned 14-CNOT gadget vs Step 4a/textbook/4b (`pqc_ring_threshold.png`) |
-| [`pqc_ring_5b.py`](pqc_ring_5b.py), [`pqc_ring_5b_from14.py`](pqc_ring_5b_from14.py) | 5b rung: isometry compile + prune → floor **14** (= 5a) |
-| [`pqc_ring_5c.py`](pqc_ring_5c.py) | 5c rung: prune the 14-CNOT circuit under the ancilla-parity observable cost → floor **5**; saves `pqc_ring_5c_{params.npy,.json}` |
-| [`draw_pqc_5abc.py`](draw_pqc_5abc.py) | draws the learned 5a/5b (merged `circuit_pqc_5a.png`, primitive `circuit_pqc_5a_raw.png`) and 5c (`circuit_pqc_5c.png`) circuits and writes the analytic spec `PQC_CIRCUITS_FOR_ANALYSIS.md` |
+| [`pqc_ring_threshold.py`](pqc_ring_threshold.py) | CNOT-noise threshold of the learned 14-CNOT gadget vs Step 4 / textbook / destructive (`pqc_ring_threshold.png`) |
+| [`pqc_ring_5b.py`](pqc_ring_5b.py), [`pqc_ring_5b_from14.py`](pqc_ring_5b_from14.py) | *Auxiliary:* isometry compile + prune → floor **14** (same as the unitary) |
+| [`pqc_ring_5c.py`](pqc_ring_5c.py) | *Auxiliary:* prune the 14-CNOT circuit under the ancilla-parity observable cost → floor **5**; saves `pqc_ring_5c_{params.npy,.json}` |
+| [`draw_pqc_5abc.py`](draw_pqc_5abc.py) | draws the learned Step-5 circuit (merged `circuit_pqc_5a.png`, primitive `circuit_pqc_5a_raw.png`) and the auxiliary observable circuit (`circuit_pqc_5c.png`) and writes the analytic spec `PQC_CIRCUITS_FOR_ANALYSIS.md` |
 | [`draw_pqc_ansatz.py`](draw_pqc_ansatz.py) | draws the ansatz structure (`circuit_pqc_ansatz.png`) |
-| [`PQC_APPROX.md`](PQC_APPROX.md) | Step 5 write-up: three targets, the LHST derivation, the expressibility/trainability squeeze, and the noise-aware threshold result |
+| [`PQC_APPROX.md`](PQC_APPROX.md) | Step 5 write-up: the gadget-matched ansatz, pruning to 14, the CNOT-noise threshold, and the auxiliary isometry/observable relaxations |
 | [`requirements.txt`](requirements.txt) | Dependencies (pinned minimums + tested versions) |
 
 ## Setup & run
@@ -434,7 +433,7 @@ python draw_noisy_bell.py          # regenerate the input circuit diagram
 python pqec_gadget.py              # ideal gadget: verify + ρ_ε recovery demo
 python draw_pqec_gadget.py         # regenerate the gadget circuit diagram
 python pqec_gadget_noise.py        # Fredkin global depol: <O> vs g_F (self-mitigates)
-python draw_gadget_noise.py        # Step 3a gadget circuit diagram
+python draw_gadget_noise.py        # Step 2 gadget circuit diagram
 python verify_analytic_global_depol.py  # analytic formulas vs circuit (~1e-13)
 python verify_note_states.py       # note's step-by-step states vs circuit (~1e-16)
 python plot_global_depol_benchmark.py   # F_PQEC flatness + sampling divergence figure

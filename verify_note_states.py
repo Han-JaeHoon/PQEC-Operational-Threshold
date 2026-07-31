@@ -1,5 +1,5 @@
 """
-Verify the step-by-step states of the Step-3a note against the circuit.
+Verify the step-by-step states of the Step-2 note against the circuit.
 =======================================================================
 
 Note: "Effect of Three-Qubit Global Depolarizing Noise after Each CSWAP Gate in
@@ -107,7 +107,7 @@ def worst_over_steps(eps, g):
 
 def main():
     print("=" * 74)
-    print(" Step-3a note states  vs  circuit  (ordering a,A1,A2,B1,B2 = wires 0..4)")
+    print(" Step-2 note states  vs  circuit  (ordering a,A1,A2,B1,B2 = wires 0..4)")
     print("=" * 74)
 
     # commutation the note relies on

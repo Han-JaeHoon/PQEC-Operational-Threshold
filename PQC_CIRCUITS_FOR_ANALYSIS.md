@@ -6,10 +6,10 @@ Two representations are given per circuit: (1) the **exact primitive gate list**
 
 
 ==============================================================================
-## 5a / 5b — 14-CNOT full-unitary circuit
+## Step 5 — 14-CNOT full-unitary circuit
 ==============================================================================
 
-This single circuit compiles the full 5-qubit gadget unitary U = H_a . CSWAP(0;1,3) . CSWAP(0;2,4) . H_a to machine precision, and therefore also realizes the ancilla-|0> isometry exactly (5b). It is the greedy-pruning floor of the gadget-matched ansatz (13 CNOTs unreachable). Under per-CNOT depolarizing noise it defines the operational threshold analysed in pqc_ring_threshold.py.
+This single circuit compiles the full 5-qubit gadget unitary U = H_a . CSWAP(0;1,3) . CSWAP(0;2,4) . H_a to machine precision, and therefore also realizes the ancilla-|0> isometry exactly. It is the greedy-pruning floor of the gadget-matched ansatz (13 CNOTs unreachable). Under per-CNOT depolarizing noise it defines the operational threshold analysed in pqc_ring_threshold.py.
 
 - CNOT sequence (in order): [(0, 1), (1, 3), (0, 4), (2, 4), (0, 3), (1, 3), (0, 4), (2, 4), (0, 1), (0, 3), (1, 3), (0, 2), (0, 4), (2, 4)]
 - CNOT count: 14    rotation blocks: 15
@@ -621,10 +621,10 @@ then **CNOT(control=2, target=4)** followed by depolarizing `(1-e2)rho+e2 I/4` o
 ```
 
 ==============================================================================
-## 5c — 5-CNOT observable circuit
+## Auxiliary (observable relaxation) — 5-CNOT observable circuit
 ==============================================================================
 
-Pruned from the 14-CNOT circuit under the OBSERVABLE cost: it need only reproduce the ancilla-parity correlators <Z_a> -> Tr(rho^2) and <Z_a (x) O> -> Tr(O rho^2) for O in {|Phi+><Phi+|, ZZ} over an eps grid (NOT the full unitary). This is the 5c rung of the relaxation ladder; 4 CNOTs is unreachable.
+Pruned from the 14-CNOT circuit under the OBSERVABLE cost: it need only reproduce the ancilla-parity correlators <Z_a> -> Tr(rho^2) and <Z_a (x) O> -> Tr(O rho^2) for O in {|Phi+><Phi+|, ZZ} over an eps grid (NOT the full unitary). This is the observable rung of the relaxation ladder; 4 CNOTs is unreachable.
 
 - CNOT sequence (in order): [(0, 1), (2, 4), (0, 4), (2, 4), (0, 3)]
 - CNOT count: 5    rotation blocks: 6

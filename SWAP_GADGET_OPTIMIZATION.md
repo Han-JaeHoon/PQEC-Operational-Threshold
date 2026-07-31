@@ -5,16 +5,17 @@ wire 0, retained register `A=(A1,A2)` = wires 1,2, discarded `B=(B1,B2)` = wires
 3,4) costs **16 CNOTs** with the textbook 8-CNOT Fredkin decomposition. We reduce
 this in two senses of "same role":
 
-- **Step 4a — Same unitary** — keep the exact 5-qubit unitary, fewer CNOTs.
-- **Step 4b — Same measured observable** — reproduce only `F = Tr(Oρ²)/Tr(ρ²)`, which is
-  all PQEC uses; this allows a much larger reduction.
+- **Step 4 — Same unitary** — keep the exact 5-qubit unitary, fewer CNOTs.
+- **Auxiliary — Same measured observable (destructive gadget)** — reproduce only
+  `F = Tr(Oρ²)/Tr(ρ²)`, which is all PQEC uses; this allows a much larger reduction.
+  (Not part of the main linear flow; kept as a low-CNOT reference baseline.)
 
-All results are checked rigorously (unitary equivalence for Step 4a; machine-precision
-observable equivalence for Step 4b).
+All results are checked rigorously (unitary equivalence for Step 4; machine-precision
+observable equivalence for the destructive gadget).
 
 ---
 
-## Step 4a — Unitary-preserving reduction: 16 → 14 CNOTs
+## Step 4 — Unitary-preserving reduction: 16 → 14 CNOTs
 
 Script: [`resynthesize_gadget.py`](resynthesize_gadget.py). The gadget is
 Clifford + 2 Toffoli. Two independent optimizers were run, and each output was
@@ -46,23 +47,23 @@ keeping the exact coherent gadget.
 *identically* in PennyLane (`pqec_resynth_noise.py`, hard-coded gate list; Hilbert–
 Schmidt overlap with the gadget `U` = `1.0000000000` up to global phase; `ε₂=0` read-out
 matches `Tr(Oρ²)/Tr(ρ²)` for `Φ⁺` and `ZZ` to `1e-16`). Putting a 2-qubit depolarizing
-`ε₂` after each of the 14 CNOTs (single-qubit gates ideal — same convention as Step 3b/4b)
+`ε₂` after each of the 14 CNOTs (single-qubit gates ideal — same convention as Step 3 / the destructive gadget)
 gives, for the purified fidelity `F` with `O=|Φ⁺⟩⟨Φ⁺|`:
 
 | input `ε` | 0.10 | 0.20 | 0.30 | 0.40 | 0.50 | 0.60 |
 |-----------|------|------|------|------|------|------|
 | textbook cSWAP (16) `ε₂*` | 0.033 | 0.061 | 0.085 | 0.103 | 0.117 | 0.126 |
-| **Step 4a optimized (14) `ε₂*`** | **0.041** | **0.079** | **0.112** | **0.140** | **0.162** | **0.178** |
+| **Step 4 optimized (14) `ε₂*`** | **0.041** | **0.079** | **0.112** | **0.140** | **0.162** | **0.178** |
 | ratio 14/16 | 1.25 | 1.29 | 1.32 | 1.36 | 1.39 | 1.42 |
 
 So the exact-unitary reduction lifts the threshold **~1.25–1.42×** — *more* than the naive
 `16/14 = 1.14` count ratio, i.e. the machine-found 14-CNOT layout also propagates noise a
-little more favourably. It stays well below the measurement-only Step 4b (2 CNOTs), as
+little more favourably. It stays well below the measurement-only destructive gadget (2 CNOTs), as
 expected. Figure: `pqec_resynth_threshold.png`.
 
 ---
 
-## Step 4b — Measurement-equivalent gadget: 2 CNOTs
+## Auxiliary — Measurement-equivalent (destructive) gadget: 2 CNOTs
 
 Script: [`destructive_gadget.py`](destructive_gadget.py). PQEC only needs the
 purified observable `F = Tr(Oρ²)/Tr(ρ²)`. This is exactly what the **destructive
@@ -143,8 +144,8 @@ controlled-SWAP gadget.
 | | CNOTs / measurement circuit | keeps | `ε₂*` @ `ε=0.4` |
 |--|:---------------------------:|-------|:---------------:|
 | textbook controlled-SWAP | 16 | coherent purified state | 0.103 |
-| optimized controlled-SWAP (Step 4a) | 14 | coherent purified state | **0.140** (computed) |
-| destructive / VD (Step 4b) | **2** (per setting) | observable `⟨O⟩` only | **0.313** |
+| optimized controlled-SWAP (Step 4) | 14 | coherent purified state | **0.140** (computed) |
+| destructive / VD (auxiliary) | **2** (per setting) | observable `⟨O⟩` only | **0.313** |
 
 The per-circuit two-qubit-gate count drops **7–8×** (16→2, or 14→2), and the
 destructive/VD gadget has a **2.7–4.4× higher mean-fidelity threshold**. For an
@@ -160,4 +161,4 @@ threshold. The destructive route is an alternative destructive **measurement** o
 the same virtual-distillation estimator — matching the VD framing of the original
 PQEC paper — not a re-compilation of the controlled-SWAP unitary.
 
-Optional dependencies for Step 4a: `qiskit`, `pytket` (`resynthesize_gadget.py`).
+Optional dependencies for Step 4: `qiskit`, `pytket` (`resynthesize_gadget.py`).

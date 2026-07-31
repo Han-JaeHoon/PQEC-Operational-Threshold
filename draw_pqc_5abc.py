@@ -1,6 +1,6 @@
 """
-Draw the learned Step-5 circuits (5a/5b = 14 CNOTs, 5c = 5 CNOTs) and emit an
-analytic circuit spec.
+Draw the learned Step-5 circuit (14 CNOTs) and the auxiliary observable circuit
+(5 CNOTs) and emit an analytic circuit spec.
 =====================================================================================
 
 The ansatz (`pqc_ring_prune.ansatz_masked`) always carries a full RX-RY-RZ layer
@@ -13,8 +13,8 @@ drawn circuit is verified to equal the stored solution to machine precision (up 
 global phase).
 
 Outputs:
-  circuit_pqc_5a.png   -- the 14-CNOT circuit (compiles U exactly; 5b uses the SAME one)
-  circuit_pqc_5c.png   -- the 5-CNOT circuit (reproduces the ancilla-parity observable)
+  circuit_pqc_5a.png   -- the 14-CNOT circuit (compiles U exactly; the isometry uses the SAME circuit)
+  circuit_pqc_5c.png   -- the auxiliary 5-CNOT circuit (reproduces the ancilla-parity observable)
   PQC_CIRCUITS_FOR_ANALYSIS.md -- exact ordered gate lists + merged per-block SU(2)
                                   matrices, for an independent analytic check.
 
@@ -211,42 +211,42 @@ def write_spec(specs):
 def main():
     print("Drawing Step-5 learned circuits + writing analytic spec\n")
 
-    # ---- 5a / 5b : the 14-CNOT circuit ----
+    # ---- Step 5 (unitary; the isometry uses the same circuit) : the 14-CNOT circuit ----
     mask_a = json.load(open("pqc_ring_pruned.json"))["mask"]
     par_a = np.load("pqc_ring_pruned_params.npy")
     b_a, c_a, ov_a = draw(mask_a, par_a, "circuit_pqc_5a.png",
-                          "Step 5a / 5b — learned 14-CNOT circuit "
+                          "Step 5 — learned 14-CNOT circuit "
                           "(compiles U = H_a·CSWAP·CSWAP·H_a exactly)")
     draw_raw(mask_a, par_a, "circuit_pqc_5a_raw.png",
-             "Step 5a / 5b — learned 14-CNOT circuit, primitive RX-RY-RZ + CNOT form")
+             "Step 5 — learned 14-CNOT circuit, primitive RX-RY-RZ + CNOT form")
     tgt_a = abs(np.vdot(U_TARGET, unitary(ansatz_masked(mask_a), par_a))) / DIM
     prim_ops_a, prim_a = _primitive_lines(mask_a, par_a)
 
-    # ---- 5c : the 5-CNOT observable circuit ----
+    # ---- Auxiliary (observable relaxation) : the 5-CNOT circuit ----
     mask_c = json.load(open("pqc_ring_5c.json"))["mask"]
     par_c = np.load("pqc_ring_5c_params.npy")
     b_c, c_c, ov_c = draw(mask_c, par_c, "circuit_pqc_5c.png",
-                          "Step 5c — learned 5-CNOT circuit "
+                          "Auxiliary (observable relaxation) — learned 5-CNOT circuit "
                           "(reproduces the purified observable F=<Z_a⊗O>/<Z_a>)")
     tgt_c = abs(np.vdot(U_TARGET, unitary(ansatz_masked(mask_c), par_c))) / DIM
     prim_ops_c, prim_c = _primitive_lines(mask_c, par_c)
 
     write_spec([
-        dict(name="5a / 5b — 14-CNOT full-unitary circuit",
+        dict(name="Step 5 — 14-CNOT full-unitary circuit",
              desc="This single circuit compiles the full 5-qubit gadget unitary "
                   "U = H_a . CSWAP(0;1,3) . CSWAP(0;2,4) . H_a to machine precision, and "
-                  "therefore also realizes the ancilla-|0> isometry exactly (5b). It is "
+                  "therefore also realizes the ancilla-|0> isometry exactly. It is "
                   "the greedy-pruning floor of the gadget-matched ansatz (13 CNOTs "
                   "unreachable). Under per-CNOT depolarizing noise it defines the "
                   "operational threshold analysed in pqc_ring_threshold.py.",
              cnots=c_a, blocks=b_a, prim_lines=prim_a,
              tgt_overlap=f"{tgt_a:.12f}  (=1 => exact compilation of U)",
              drawn_overlap=ov_a),
-        dict(name="5c — 5-CNOT observable circuit",
+        dict(name="Auxiliary (observable relaxation) — 5-CNOT observable circuit",
              desc="Pruned from the 14-CNOT circuit under the OBSERVABLE cost: it need "
                   "only reproduce the ancilla-parity correlators <Z_a> -> Tr(rho^2) and "
                   "<Z_a (x) O> -> Tr(O rho^2) for O in {|Phi+><Phi+|, ZZ} over an eps "
-                  "grid (NOT the full unitary). This is the 5c rung of the relaxation "
+                  "grid (NOT the full unitary). This is the observable rung of the relaxation "
                   "ladder; 4 CNOTs is unreachable.",
              cnots=c_c, blocks=b_c, prim_lines=prim_c,
              tgt_overlap=f"{tgt_c:.12f}  (NOT ~1: it is not the full unitary, by design)",

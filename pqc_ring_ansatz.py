@@ -1,8 +1,8 @@
 """
-Step 5a (success) — RX-RY-RZ PQC that DOES compile the gadget.
+Step 5 (success) — RX-RY-RZ PQC that DOES compile the gadget.
 =============================================================
 
-After Step 5a/5b (pqc_compile.py) failed to compile U = H_a . CSWAP(0;1,3) .
+After the generic-ansatz attempt (pqc_compile.py) failed to compile U = H_a . CSWAP(0;1,3) .
 CSWAP(0;2,4) . H_a with generic ansaetze, we searched what an RX-RY-RZ + CNOT ansatz
 needs to succeed. Three knobs, tested with exact analytic gradients + a teacher-student
 (in-class recompilation) test that separates EXPRESSIBILITY (U not reachable) from
@@ -200,7 +200,7 @@ PARAMS_FILE = "pqc_ring_L3_params.npy"
 
 def main(restarts=20):
     print("=" * 84)
-    print(" Step 5a (success) — RX-RY-RZ after EVERY CNOT, gadget connectivity, L=3")
+    print(" Step 5 (success) — RX-RY-RZ after EVERY CNOT, gadget connectivity, L=3")
     print("=" * 84)
     ops, npar = ansatz_percnot(GADGET_PAIRS, 3)
     ncx = len(GADGET_PAIRS) * 3

@@ -4,14 +4,14 @@ CNOT-noise threshold of the LEARNED 14-CNOT gadget (from pruning).
 
 Take the pruned 14-CNOT exact compilation (pqc_ring_pruned_*.{npy,json}), put a 2-qubit
 depolarizing eps2 after each of its 14 CNOTs (single-qubit rotations ideal -- same
-convention as Step 3b/4a/4b), and find the threshold eps2*(eps) where the purified
-fidelity F = <Z_a (x) O>/<Z_a> drops to F_bare = (1+3t)/4.
+convention as Step 3 / Step 4 / the destructive gadget), and find the threshold
+eps2*(eps) where the purified fidelity F = <Z_a (x) O>/<Z_a> drops to F_bare = (1+3t)/4.
 
 Compare four 14/16/2-CNOT gadgets under the identical noise convention:
   * textbook controlled-SWAP  (16)  -- pqec_cnot_threshold.eps2_star
-  * Step 4a, Qiskit-optimized (14)  -- pqec_resynth_noise.threshold_resynth
+  * Step 4, Qiskit-optimized (14)  -- pqec_resynth_noise.threshold_resynth
   * Step 5 learned + pruned   (14)  -- computed here
-  * destructive Step 4b       ( 2)  -- destructive_gadget.threshold_dest_closed
+  * destructive gadget        ( 2)  -- destructive_gadget.threshold_dest_closed  (auxiliary)
 
 Run:  python pqc_ring_threshold.py
 """
@@ -95,7 +95,7 @@ def main():
 
     # (2) threshold comparison
     print("\n (2) CNOT-noise threshold eps2* (single-qubit gates ideal):")
-    print(f"     {'eps':>5} | {'textbook(16)':>12} {'Step4a(14)':>11} {'learned(14)':>12} "
+    print(f"     {'eps':>5} | {'textbook(16)':>12} {'Step4(14)':>11} {'learned(14)':>12} "
           f"{'dest(2)':>9}")
     EPS = [0.10, 0.20, 0.30, 0.40, 0.50, 0.60]
     rows = []
@@ -107,16 +107,16 @@ def main():
         rows.append((e, t16, t4a, tL, t2))
         print(f"     {e:>5.2f} | {t16:>12.4f} {t4a:>11.4f} {tL:>12.4f} {t2:>9.4f}")
 
-    print("\n  Both 14-CNOT gadgets (Step 4a Qiskit-optimized vs Step 5 learned+pruned)")
+    print("\n  Both 14-CNOT gadgets (Step 4 Qiskit-optimized vs Step 5 learned+pruned)")
     print("  keep the exact unitary; comparing their thresholds shows whether the")
     print("  specific 14-CNOT layout matters for noise robustness.")
 
     # figure
     fig, ax = plt.subplots(figsize=(7, 5))
     E = [r[0] for r in rows]
-    ax.plot(E, [r[4] for r in rows], "-d", color="C3", label="Step 4b destructive (2)")
+    ax.plot(E, [r[4] for r in rows], "-d", color="C3", label="destructive (2, auxiliary)")
     ax.plot(E, [r[3] for r in rows], "-o", color="C1", label=f"Step 5 learned+pruned ({N_CX})")
-    ax.plot(E, [r[2] for r in rows], "-s", color="C0", label="Step 4a Qiskit-opt (14)")
+    ax.plot(E, [r[2] for r in rows], "-s", color="C0", label="Step 4 Qiskit-opt (14)")
     ax.plot(E, [r[1] for r in rows], "-^", color="C2", label="textbook cSWAP (16)")
     ax.set_xlabel(r"input noise  $\varepsilon$")
     ax.set_ylabel(r"CNOT-noise threshold  $\varepsilon_2^*$")

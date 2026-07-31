@@ -7,7 +7,7 @@ CNOTs one at a time — keeping ALL rotation layers so the parameter vector and 
 warm-start stay aligned — retraining from the current solution after each removal.
 A CNOT is "removable" if the circuit still compiles U to delta < 1e-6.  This finds a
 (locally) minimal CNOT count for this ansatz family and tests whether we can go below
-the structured Step-4a count of 14.
+the structured Step-4 count of 14.
 
 Run:  python pqc_ring_prune.py
 """
@@ -82,7 +82,7 @@ def main(tol=1e-6):
     ncx = sum(mask)
     remaining = [SEQ[i] for i in range(len(SEQ)) if mask[i]]
     oe = _obs_err(ansatz_masked(mask), cur)
-    print(f"\n  MINIMAL (greedy) CNOT count = {ncx}   (vs Step-4a 14, textbook 16, full 18)")
+    print(f"\n  MINIMAL (greedy) CNOT count = {ncx}   (vs Step-4 14, textbook 16, full 18)")
     print(f"  remaining CNOTs: {remaining}")
     print(f"  final delta = {_delta(ansatz_masked(mask), cur):.2e},  observable err = {oe:.2e}")
     np.save("pqc_ring_pruned_params.npy", cur)

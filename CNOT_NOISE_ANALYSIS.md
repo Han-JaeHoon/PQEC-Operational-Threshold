@@ -162,7 +162,7 @@ N_shot(t,q)/N_shot(t,0) ~ [Q(t,0)/Q(t,q)]² = s⁻²⁰ [ (1 + 3 t²)/(1 + 3 s�
 - `q=0` (`s=1`): `F_PQEC = (1+3t)²/(4(1+3t²))` — ideal one-round PQEC.
 - `t=0`: `F_PQEC = ¼` — no recoverable Bell information.
 
-### I.10 Contrast with the 3-qubit global-depolarizing model (Step 3a)
+### I.10 Contrast with the 3-qubit global-depolarizing model (Step 2)
 
 | | 3-qubit global depol after each whole CSWAP | two-qubit depol after each **CNOT** |
 |--|---------------------------------------------|-------------------------------------|
@@ -195,7 +195,7 @@ K_I = √(1 − 15 ε₂/16) · I ,     K_P = √(ε₂/16) · P   (15 non-ident
 
 which is exactly `D_q(σ) = (1−ε₂)σ + ε₂ I₄/4`, i.e. **ε₂ is the replacement
 probability** — the same convention as the 3-qubit global-depolarizing channel of
-Step 3a.
+Step 2.
 
 ### II.3 Verification (circuit vs Part I), all to `~1e-14`
 

@@ -1,11 +1,12 @@
 """
-Step 5b with the successful 5a ansatz: compile the ancilla-|0> ISOMETRY, then prune.
+Auxiliary (isometry) with the successful Step-5 ansatz: compile the ancilla-|0>
+ISOMETRY, then prune.
 ===================================================================================
 
-Reuse the gadget-matched, per-CNOT-rotation ansatz that solved 5a, but target the
-ancilla-|0> isometry U0 = U E0 (32x16) instead of the full unitary. Since 5b <= 5a in
-difficulty, we ask: does it compile at fewer CNOTs, and does greedy pruning reach a
-lower CNOT floor than 5a's 14?
+Reuse the gadget-matched, per-CNOT-rotation ansatz that solved the unitary (Step 5), but
+target the ancilla-|0> isometry U0 = U E0 (32x16) instead of the full unitary. Since the
+isometry <= unitary in difficulty, we ask: does it compile at fewer CNOTs, and does
+greedy pruning reach a lower CNOT floor than the unitary's 14?
 
 Run:  python pqc_ring_5b.py
 """
@@ -15,7 +16,7 @@ from pqc_ring_ansatz import ansatz_percnot, GADGET_PAIRS, cost_grad, unitary
 from pqc_ring_prune import ansatz_masked, SEQ, NPAR
 from pqc_common import U0_TARGET, _ANC0_ISO
 
-TGT, E = U0_TARGET, _ANC0_ISO          # 5b isometry target (32x16), dc=16
+TGT, E = U0_TARGET, _ANC0_ISO          # isometry target (32x16), dc=16
 
 
 def train(ops, npar, restarts, seed, warm=None):
@@ -37,7 +38,7 @@ def _delta(ops, x):
 
 def main(tol=1e-6):
     print("=" * 78)
-    print(" Step 5b (isometry) with the 5a ansatz: compile + prune")
+    print(" Auxiliary (isometry) with the Step-5 ansatz: compile + prune")
     print("=" * 78)
     print(f"\n compile scan (ansatz_percnot, GADGET_PAIRS):")
     print(f"   {'L':>2} {'CNOTs':>6} {'params':>7} {'delta_iso':>11}")
@@ -71,7 +72,7 @@ def main(tol=1e-6):
             print(f"   no further removal keeps delta<{tol:g} (best try = {d:.2e})", flush=True)
             break
     ncx = sum(mask)
-    print(f"\n  5b (isometry) minimal (greedy) CNOT count = {ncx}   (vs 5a full-unitary 14)")
+    print(f"\n  isometry minimal (greedy) CNOT count = {ncx}   (vs Step-5 full-unitary 14)")
     print(f"  remaining CNOTs: {[SEQ[i] for i in range(len(SEQ)) if mask[i]]}")
     print(f"  final delta_iso = {_delta(ansatz_masked(mask), cur):.2e}")
     np.save("pqc_ring_5b_params.npy", cur)

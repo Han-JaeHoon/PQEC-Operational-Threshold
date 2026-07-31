@@ -7,14 +7,15 @@ The one-round PQEC gadget is the fixed 5-qubit unitary
     U = H_a . CSWAP(a;A1,B1) . CSWAP(a;A2,B2) . H_a
         (wire 0 = ancilla a, register A = wires 1,2 [kept], register B = wires 3,4)
 
-Steps 5a/5b/5c ask whether a *parameterized* quantum circuit (PQC) with FEWER CNOTs
-can play the same role, in three increasingly relaxed senses (mirroring Step 4):
+Step 5 (and two auxiliary relaxations) ask whether a *parameterized* quantum circuit
+(PQC) with FEWER CNOTs can play the same role, in three increasingly relaxed senses
+(mirroring Step 4):
 
-  * Step 5a  -- reproduce the FULL 5-qubit unitary U           (all 32 columns)
-  * Step 5b  -- reproduce U on the PHYSICAL input subspace     (ancilla |0>, 16 cols)
-                i.e. keep the coherent purified state that gets fed forward
-  * Step 5c  -- noise-aware training: keep only the purified OBSERVABLE
-                F = Tr(O rho^2)/Tr(rho^2), with CNOT depolarizing IN the loss
+  * Step 5 (main)   -- reproduce the FULL 5-qubit unitary U    (all 32 columns)
+  * isometry (aux)  -- reproduce U on the PHYSICAL input subspace (ancilla |0>, 16 cols)
+                       i.e. keep the coherent purified state that gets fed forward
+  * observable (aux)-- noise-aware training: keep only the purified OBSERVABLE
+                       F = Tr(O rho^2)/Tr(rho^2), with CNOT depolarizing IN the loss
 
 This module holds everything shared by those three scripts:
 
@@ -24,11 +25,11 @@ This module holds everything shared by those three scripts:
     ansatz unitary V(theta) -- used for the unitary/coherent-state costs,
   * a PennyLane default.mixed executor of the SAME ansatz with a 2-qubit
     depolarizing channel of strength eps2 after each CNOT -- used for the noisy
-    observable read-out (Step 5c),
+    observable read-out (auxiliary observable study),
   * the ancilla-parity read-out F = <Z_a (x) O>/<Z_a> from any 5-qubit unitary,
   * exact references: F_exact(eps) (ideal purified fidelity) and F_bare(eps).
 
-All three notions of "same role" reuse the Step-1/2/3 conventions exactly:
+All three notions of "same role" reuse the Setup/2/3 conventions exactly:
 rho_eps = (1-eps)|Phi+><Phi+| + eps I/4 (t = 1-eps), the kept register is A = wires
 1,2, the observable is O = |Phi+><Phi+|, and the CNOT channel is the replacement
 2-qubit global depolarizing  (1-eps2) rho + eps2 I/4  (same as global_depol_kraus).
@@ -180,7 +181,7 @@ def unitary_from_params(ops, params, cols_isometry=None):
 
     cols_isometry: if None, start from I_32 (full 32x32 unitary). Otherwise start
     from that 32xk isometry (e.g. the ancilla-|0> columns) and return 32xk -- this
-    is exactly V0 = V @ E used by the Step-5b coherent-state cost.
+    is exactly V0 = V @ E used by the isometry (auxiliary) cost.
     """
     params = np.asarray(params, dtype=float)
     V = np.eye(DIM, dtype=complex) if cols_isometry is None \
@@ -276,7 +277,7 @@ def make_F_qnode(ops):
 # Costs (Hilbert-Schmidt test)  -- 0 iff exact reproduction (up to global phase)
 # ---------------------------------------------------------------------------
 def cost_unitary(ops, params):
-    """Step 5a cost:  1 - |Tr(U^dag V)|^2 / 32^2."""
+    """Step 5 cost:  1 - |Tr(U^dag V)|^2 / 32^2."""
     V = unitary_from_params(ops, params)
     ov = np.vdot(U_TARGET, V)                     # Tr(U^dag V)
     return 1.0 - (abs(ov) ** 2) / DIM ** 2
@@ -287,7 +288,7 @@ _ANC0_ISO = np.eye(DIM, dtype=complex)[:, _ANC0_COLS]
 
 
 def cost_coherent(ops, params):
-    """Step 5b cost:  1 - |Tr(U0^dag V0)|^2 / 16^2   (ancilla-|0> input block)."""
+    """Isometry (auxiliary) cost:  1 - |Tr(U0^dag V0)|^2 / 16^2   (ancilla-|0> input block)."""
     V0 = unitary_from_params(ops, params, cols_isometry=_ANC0_ISO)
     ov = np.vdot(U0_TARGET, V0)
     return 1.0 - (abs(ov) ** 2) / (len(_ANC0_COLS) ** 2)
@@ -297,7 +298,7 @@ def cost_coherent(ops, params):
 # Exact analytic (cost, gradient) via backprop through the gate product.
 # The Hilbert-Schmidt cost 1-|Tr(T^dag V E)|^2/dc^2 is a GLOBAL cost with barren
 # plateaus; finite-difference gradients stall, so we differentiate it exactly.
-# target T (32 x dc), input isometry E (32 x dc):  T=U,E=I (5a);  T=U0,E=anc0 (5b).
+# target T (32 x dc), input isometry E (32 x dc):  T=U,E=I (unitary);  T=U0,E=anc0 (isometry).
 # ---------------------------------------------------------------------------
 def _apply_left(op, M, params):
     if op[0] == "rot":
@@ -358,11 +359,11 @@ def _cost_grad(ops, params, target, E):
 
 
 def cost_grad_unitary(ops, params):
-    """(cost, grad) for Step 5a (full unitary; E=I, target=U)."""
+    """(cost, grad) for Step 5 (full unitary; E=I, target=U)."""
     return _cost_grad(ops, params, U_TARGET, np.eye(DIM, dtype=complex))
 
 
-# --- Local Hilbert-Schmidt-Test (LHST) cost for Step 5a ---------------------
+# --- Local Hilbert-Schmidt-Test (LHST) cost for Step 5 ---------------------
 # The global cost 1-|Tr(U^dag V)|^2/d^2 is prone to barren plateaus; LHST (Khatri et al.,
 # Quantum 3, 140 (2019)) replaces the global Bell overlap of the Choi state of
 # W = V^dag U by an average of per-qubit Bell overlaps.  Closed operator form
@@ -412,7 +413,7 @@ def cost_grad_lhst(ops, params):
 
 
 def cost_grad_coherent(ops, params):
-    """(cost, grad) for Step 5b (ancilla-|0> block; E=anc0 isometry, target=U0)."""
+    """(cost, grad) for the isometry, auxiliary (ancilla-|0> block; E=anc0 isometry, target=U0)."""
     return _cost_grad(ops, params, U0_TARGET, _ANC0_ISO)
 
 

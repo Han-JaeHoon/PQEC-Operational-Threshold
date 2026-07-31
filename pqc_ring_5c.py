@@ -1,13 +1,13 @@
 """
-Step 5c on the 14-CNOT circuit: prune with the OBSERVABLE cost (ancilla-parity).
-===============================================================================
+Auxiliary (observable) on the 14-CNOT circuit: prune with the OBSERVABLE cost (ancilla-parity).
+===============================================================================================
 
-Take the exact 14-CNOT circuit and prune it under the weaker 5c requirement -- only the
+Take the exact 14-CNOT circuit and prune it under the weaker observable requirement -- only the
 purified observable via the ancilla-parity read-out F = <Z_a (x) O>/<Z_a>. We match the
 correlators <Z_a> -> Tr(rho^2) and <Z_a (x) O> -> Tr(O rho^2) (anchored, so no
 denominator degeneracy) for O in {Phi+, ZZ} over an eps grid. Greedy pruning then finds
-how few CNOTs reproduce the observable -- the 5c rung of the relaxation ladder on the
-same ansatz+prune footing as 5a/5b (both 14).
+how few CNOTs reproduce the observable -- the observable rung of the relaxation ladder on
+the same ansatz+prune footing as the unitary/isometry (both 14).
 
 Exact analytic gradient of the expectation cost (verified vs finite differences).
 
@@ -94,7 +94,7 @@ def train(mask, terms, warm, seed, n_random=1):
 
 def main(tol=1e-6):
     print("=" * 78)
-    print(" Step 5c on the 14-CNOT circuit: prune with the OBSERVABLE cost")
+    print(" Auxiliary (observable) on the 14-CNOT circuit: prune with the OBSERVABLE cost")
     print("=" * 78)
     terms = build_terms()
     mask = json.load(open("pqc_ring_pruned.json"))["mask"]
@@ -119,8 +119,8 @@ def main(tol=1e-6):
             print(f"  no further removal keeps obs cost<{tol:g} (best try = {d:.2e})", flush=True)
             break
     ncx = sum(mask)
-    print(f"\n  5c observable floor (ancilla-parity read-out) = {ncx} CNOTs")
-    print(f"  (5a full-unitary = 14, 5b isometry = 14; Step 4b destructive = 2)")
+    print(f"\n  observable floor (ancilla-parity read-out) = {ncx} CNOTs")
+    print(f"  (Step-5 full-unitary = 14, isometry = 14; destructive = 2)")
     print(f"  remaining CNOTs: {[SEQ[i] for i in range(len(SEQ)) if mask[i]]}")
     np.save("pqc_ring_5c_params.npy", cur)
     json.dump({"ncx": ncx, "mask": mask}, open("pqc_ring_5c.json", "w"))
