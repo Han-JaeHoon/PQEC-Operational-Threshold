@@ -1,0 +1,55 @@
+{
+  "git_commit": "c23ea54d5254c788b74b1282b74feb3fdf8c45dc",
+  "branch": "iterated-noisy-pqec",
+  "circuits": {
+    "step3": {
+      "identifier": "step3",
+      "label": "Step 3: textbook 16-CNOT",
+      "n_cnot": 16,
+      "source": "verify_analytic_decomposed._fred (textbook 8-CNOT/Controlled-SWAP decomposition)"
+    },
+    "step4": {
+      "identifier": "step4",
+      "label": "Step 4: resynthesized 14-CNOT",
+      "n_cnot": 14,
+      "source": "pqec_resynth_noise.GATES (Qiskit transpile, basis {u,cx}, opt_level 3, seed 7)"
+    },
+    "step5": {
+      "identifier": "step5",
+      "label": "Step 5: learned 14-CNOT",
+      "n_cnot": 14,
+      "source": "pqc_ring_prune.ansatz_masked + pqc_ring_pruned_params.npy"
+    }
+  },
+  "q_grid": [
+    0.0,
+    1e-05,
+    3e-05,
+    0.0001,
+    0.0003,
+    0.001,
+    0.003,
+    0.01,
+    0.02,
+    0.05
+  ],
+  "initial_epsilon_grid": [
+    0.05,
+    0.1,
+    0.2,
+    0.3,
+    0.5
+  ],
+  "convergence_tolerance": 1e-12,
+  "max_iterations": 1000,
+  "convergence_criterion": "||rho_{n+1}-rho_n||_F < tol",
+  "noise_channel": "D_q^(ij)(rho) = (1-q) rho + q [ I_ij/4 (x) Tr_ij(rho) ]  (two-qubit replacement depolarizing, applied after every CNOT; all single-qubit gates ideal)",
+  "qubit_ordering": "wire 0 = ancilla a; wires 1,2 = retained register A; wires 3,4 = discarded register B",
+  "effective_map": "tau_A = Tr_{a,B}[(Z_a (x) I) sigma_out];  rho_{n+1} = tau_A / Tr(tau_A)   (Z_a taken AFTER the final H, matching the repository read-out convention)",
+  "input_state": "rho_t = 1/4[II + t(XX - YY + ZZ)], t = 1 - epsilon",
+  "hermitian_projection": "each iterate is projected onto the Hermitian manifold (exact-arithmetic identity); the discarded anti-Hermitian norm is recorded as herm_err and stays ~1e-16",
+  "timestamp": "2026-08-05T07:20:41.404403+00:00",
+  "backend": "numpy 2.4.6 dense 32x32 density matrix, dtype=complex128",
+  "python": "3.11.15",
+  "validation": "one-round Q, N_Phi, F reproduce the repository PennyLane executors and the Step-3/Step-4 closed forms to <= 1.5e-15"
+}
