@@ -39,6 +39,35 @@ state and the tooling to certify it, before adding the (noisy) purification gadg
 | Isometry compiling / pruning | same-ansatz learn-then-prune floor is also **14** CNOTs (relaxing to the coherent state saves nothing) | **done** |
 | Observable pruning + noise-aware training | 14-CNOT → **5** under the ancilla-parity cost; noise-aware training adds no threshold gain | **done** |
 
+## Branch map
+
+`main` is the integrated, stable branch (all steps, comparison code, full write-ups, paper
+figures). Each step also lives on its own branch — a **full copy** of the project, so every
+branch is independently checkout-able and runnable — with a branch-specific `README.md` and a
+`STEP_GUIDE.md` listing its input state, circuit, noise model, scripts and outputs.
+
+| branch | contents | headline result |
+|--|--|--|
+| [`setup-bell-input`](../../tree/setup-bell-input) | Setup — Bell-isotropic input `ρ_t` + verification | `max\|ρ−ρ_t\| ≈ 2.8e-16`; entangled iff `ε < 2/3` |
+| [`step-1-ideal-pqec`](../../tree/step-1-ideal-pqec) | Step 1 — ideal one-round PQEC baseline | `F₁ = (1+3t)²/(4(1+3t²))`, verified to `~1e-16` |
+| [`step-2-fredkin-noise`](../../tree/step-2-fredkin-noise) | Step 2 — CSWAP-level global replacement depolarizing | self-mitigates: **no threshold**, only `N ∼ (1−g)⁻⁴` |
+| [`step-3-textbook-16cnot`](../../tree/step-3-textbook-16cnot) | Step 3 — textbook 16-CNOT, per-CNOT noise | `q_th` = 0.033 → 0.126 (ε = 0.1 → 0.6) |
+| [`step-4-resynthesized-14cnot`](../../tree/step-4-resynthesized-14cnot) | Step 4 — resynthesized 14-CNOT, per-CNOT noise | `q_th` = 0.041 → 0.178 (**1.25–1.42×** Step 3) |
+| [`step-5-learned-14cnot`](../../tree/step-5-learned-14cnot) | Step 5 — learned & pruned 14-CNOT, per-CNOT noise | `q_th` = 0.060 → 0.338 (**1.5–1.9×** Step 4) |
+| [`iterated-noisy-pqec`](../../tree/iterated-noisy-pqec) | repeated-round study: fixed points of the effective nonlinear map | `1−F_*(q) = A q`, `A` = 2.13/1.75/1.25; fixed point is a **saddle** |
+| [`archive-branched-substeps`](../../tree/archive-branched-substeps) | snapshot before the Step renumbering | preserves the old 3a/3b/4a/4b/5a/5b/5c labels |
+
+Working on several at once:
+
+```bash
+git worktree add ../pqec-step3 step-3-textbook-16cnot
+git worktree add ../pqec-step5 step-5-learned-14cnot
+```
+
+Shared-utility changes are verified on `main` first, then cherry-picked or merged into the
+branches that need them; equations and numerical results are never altered to resolve a
+conflict.
+
 ## The noisy input state
 
 The noisy input is the isotropic (global-depolarizing) Bell state
