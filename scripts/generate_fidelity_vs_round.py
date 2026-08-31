@@ -4,14 +4,19 @@
 Figure for Section 2 ("Main Results") of the summary document:
 
     x : PQEC round n        y : Bell fidelity F_n = <Phi+|rho_n|Phi+>
-    same initial Bell-isotropic state rho_{t0} and the same per-CNOT noise q
-    for all three circuits.
+    same initial Bell-isotropic state rho(eps_bar, eps_bar) and the same per-CNOT
+    noise q for all three circuits.
 
 Condition
 ---------
-    rho_0 = rho_{t0} = 1/4 [ II + t0 (XX - YY + ZZ) ],   t0 = 0.9  (eps_0 = 0.1)
+    rho_0 = rho(eps_bar, eps_bar) = 1/4 [ II + eps_bar (XX - YY + ZZ) ],
+            eps_bar = 0.9
     q     = 0.01   (two-qubit replacement depolarizing after EVERY CNOT)
     N     = 5000 rounds
+
+`eps_bar` is the document's bar-epsilon: the Bell correlation of the isotropic
+input, i.e. the point (u, v) = (eps_bar, eps_bar) of the two-parameter family
+rho(u, v) = 1/4 [ II + u (XX - YY) + v ZZ ] that Steps 3/4 evolve in.
 
 Model (unchanged from the verified repository implementations)
 -------------------------------------------------------------
@@ -76,7 +81,7 @@ import iterated_noisy_pqec as ip
 # ---------------------------------------------------------------------------
 # condition
 # ---------------------------------------------------------------------------
-T0 = 0.9                       # Bell-isotropic input rho_{t0};  eps_0 = 1 - t0 = 0.1
+EPS_BAR = 0.9                  # Bell correlation of the input: rho(eps_bar, eps_bar)
 Q = 0.01                       # per-CNOT replacement depolarizing strength
 N_ROUNDS = 5000
 
@@ -116,9 +121,9 @@ def bell_fidelity(rho):
 # ---------------------------------------------------------------------------
 # trajectories
 # ---------------------------------------------------------------------------
-def run_dense(circuit, project, n_rounds=N_ROUNDS, t0=T0, q=Q):
+def run_dense(circuit, project, n_rounds=N_ROUNDS, eps_bar=EPS_BAR, q=Q):
     """Iterate the full 32x32 five-qubit round map, recording one row per round."""
-    rho = ip.rho_isotropic(t0)
+    rho = ip.rho_isotropic(eps_bar)
     rows = []
 
     def record(n, Q_val, transverse, herm):
@@ -146,10 +151,12 @@ def run_dense(circuit, project, n_rounds=N_ROUNDS, t0=T0, q=Q):
     return rows
 
 
-def run_uv(circuit, n_rounds=N_ROUNDS, t0=T0, q=Q):
+def run_uv(circuit, n_rounds=N_ROUNDS, eps_bar=EPS_BAR, q=Q):
     """Closed-form (u,v) recursion on the invariant plane y = -x (notes 01/02).
 
         rho(u,v) = 1/4 [ II + u (XX - YY) + v ZZ ],   F = (1 + 2u + v)/4
+
+    The input rho(eps_bar, eps_bar) is the point (u_0, v_0) = (eps_bar, eps_bar).
 
     Step 3:  u' = 2 s^6 u (1+v) / D3,   v' = s^5 (1+s)(v + u^2) / D3,
              D3 = 1 + s^4 (2u^2 + v^2)
@@ -163,7 +170,7 @@ def run_uv(circuit, n_rounds=N_ROUNDS, t0=T0, q=Q):
         a, b, c = s ** 4, s ** 3 * (1 + s), s ** 2
     else:
         raise KeyError(circuit)
-    u, v = t0, t0
+    u, v = eps_bar, eps_bar
     rows = [dict(n=0, F=(1 + 2 * u + v) / 4.0, u=u, v=v)]
     for n in range(1, n_rounds + 1):
         D = 1.0 + c * (2 * u * u + v * v)
@@ -177,20 +184,25 @@ def run_uv(circuit, n_rounds=N_ROUNDS, t0=T0, q=Q):
 # ---------------------------------------------------------------------------
 def make_figure(series):
     plt.rcParams.update({
-        "font.size": 9, "axes.labelsize": 9.5, "axes.titlesize": 9.5,
-        "legend.fontsize": 8.5, "xtick.labelsize": 8.5, "ytick.labelsize": 8.5,
-        "axes.linewidth": 0.7, "xtick.major.width": 0.7, "ytick.major.width": 0.7,
+        "font.size": 9, "axes.labelsize": 9, "axes.titlesize": 9,
+        "legend.fontsize": 8, "xtick.labelsize": 8, "ytick.labelsize": 8,
+        "axes.linewidth": 0.6, "xtick.major.width": 0.6, "ytick.major.width": 0.6,
         "mathtext.fontset": "dejavuserif", "font.family": "serif",
+        # embed real TrueType outlines instead of matplotlib's default Type-3
+        # subsets, so the PDF passes publisher font checks and stays selectable.
+        "pdf.fonttype": 42, "ps.fonttype": 42, "pdf.compression": 6,
+        "svg.fonttype": "none",
     })
+    # Sized for a full-text-width figure in an 11 pt LaTeX article (~6.9 in), so
+    # it is included at ~1.0x and the 8-9 pt labels stay at 8-9 pt on the page.
     fig, (axL, axR) = plt.subplots(
-        1, 2, figsize=(9.6, 3.9), dpi=300,
-        gridspec_kw=dict(width_ratios=[1.0, 1.2], wspace=0.30))
+        1, 2, figsize=(7.0, 2.95), dpi=300,
+        gridspec_kw=dict(width_ratios=[1.0, 1.18], wspace=0.22))
 
     for ax in (axL, axR):
         ax.grid(True, ls=":", lw=0.45, color="0.78")
         ax.set_axisbelow(True)
         ax.set_xlabel(r"PQEC round  $n$")
-        ax.set_ylabel(r"Bell fidelity  $F_n=\langle\Phi^+|\rho_n|\Phi^+\rangle$")
         for side in ("top", "right"):
             ax.spines[side].set_visible(False)
 
@@ -200,54 +212,61 @@ def make_figure(series):
     for key in ("step3", "step4", "step5"):
         n, F = series[key]
         m = n <= 10
-        axL.plot(n[m], F[m], lw=1.7, ms=4.2, marker="o",
-                 markeredgecolor="white", markeredgewidth=0.6, **STYLE[key])
+        axL.plot(n[m], F[m], lw=1.4, ms=3.4, marker="o",
+                 markeredgecolor="white", markeredgewidth=0.5, **STYLE[key])
     axL.set_xlim(-0.4, 15.6)
     axL.set_ylim(*ZOOM)
     axL.set_xticks([0, 2, 4, 6, 8, 10])
-    axL.set_title("(a)  early rounds — Bell-sector convergence",
-                  loc="left", fontweight="bold")
+    axL.set_ylabel(r"Bell fidelity  $F_n=\langle\Phi^+|\rho_n|\Phi^+\rangle$")
+    axL.set_title("(a)  early rounds", loc="left", fontweight="bold")
     for key in ("step3", "step4", "step5"):
         n, F = series[key]
         axL.annotate(f"{STYLE[key]['label'].split(' — ')[0]}   {F[10]:.4f}",
                      xy=(10.55, F[10]), color=STYLE[key]["color"],
-                     fontsize=8.2, fontweight="bold", ha="left", va="center")
+                     fontsize=7.6, fontweight="bold", ha="left", va="center")
 
     # ---- (b) full range on a log axis: the Step-5 plateau and its escape ----
     axR.axhspan(*ZOOM, color="0.90", zorder=0)
-    axR.annotate("range of panel (a)", xy=(4300, ZOOM[0] + 0.005), fontsize=7.5,
-                 color="0.45", ha="right", va="bottom")
+    axR.annotate("range of panel (a)", xy=(1.15, ZOOM[0] + 0.004), fontsize=7.0,
+                 color="0.45", ha="left", va="bottom")
     for key in ("step3", "step4", "step5"):
         n, F = series[key]
         m = n >= 1
-        axR.plot(n[m], F[m], lw=1.8, **STYLE[key])
+        axR.plot(n[m], F[m], lw=1.5, **STYLE[key])
     axR.set_xscale("log")
     axR.set_xlim(1, N_ROUNDS)
     axR.set_ylim(0.38, 1.075)
+    axR.set_ylabel(r"$F_n$")
     axR.set_title("(b)  long-time behaviour", loc="left", fontweight="bold")
-    axR.legend(frameon=False, loc="center left", bbox_to_anchor=(0.015, 0.34),
-               handlelength=2.6, labelspacing=0.45)
+    axR.legend(frameon=False, loc="center left", bbox_to_anchor=(0.015, 0.33),
+               handlelength=2.2, labelspacing=0.40, borderpad=0.0,
+               handletextpad=0.5)
 
     axR.annotate("Steps 3 / 4 — flat through  $n=5000$", xy=(1.8, 1.030),
-                 fontsize=8.4, color="0.2", ha="left", va="center")
+                 fontsize=7.8, color="0.2", ha="left", va="center")
     axR.annotate("Step 5 leaves\nthe plateau", xy=(690, 0.905), xytext=(33, 0.70),
-                 fontsize=8.4, color="0.2", ha="center",
+                 fontsize=7.8, color="0.2", ha="center",
                  arrowprops=dict(arrowstyle="->", lw=0.9, color="0.4",
                                  connectionstyle="arc3,rad=-0.2"))
     axR.annotate("separable product state\n" r"$F_\infty\simeq0.4080$",
-                 xy=(3600, 0.4085), xytext=(23, 0.437), fontsize=8.4, color="0.2",
+                 xy=(3600, 0.4085), xytext=(23, 0.437), fontsize=7.8, color="0.2",
                  ha="left", va="center",
                  arrowprops=dict(arrowstyle="->", lw=0.9, color="0.4",
                                  connectionstyle="arc3,rad=-0.12"))
 
     fig.suptitle(
-        r"Repeated noisy PQEC:  $\rho_0=\rho_{t_0}$ with $t_0=%.1f$,  "
-        r"per-CNOT depolarizing $q=%.2f$ — identical for all three circuits" % (T0, Q),
-        fontsize=9.5, y=1.02)
+        r"$\rho_0=\rho(\bar{\epsilon},\bar{\epsilon})$, "
+        r"$\bar{\epsilon}=%.1f$;   per-CNOT depolarizing $q=%.2f$   "
+        r"(identical for all three circuits)" % (EPS_BAR, Q),
+        fontsize=9, y=1.035)
 
+    # PDF is the primary publication output; the PNG is a preview of the same
+    # drawing.  bbox_inches="tight" + a hair of padding keeps the external
+    # whitespace minimal without clipping the suptitle or the direct labels.
     for ext in ("pdf", "png"):
         path = os.path.join(FIG_DIR, f"fidelity_vs_round.{ext}")
-        fig.savefig(path, bbox_inches="tight", facecolor="white")
+        fig.savefig(path, format=ext, bbox_inches="tight", pad_inches=0.02,
+                    facecolor="white")
         print(f"  wrote {os.path.relpath(path, ROOT)}")
     plt.close(fig)
 
@@ -259,7 +278,8 @@ def main():
     t_start = time.time()
 
     print("=" * 78)
-    print(f" Bell fidelity vs PQEC round   t0 = {T0}, q = {Q}, N = {N_ROUNDS}")
+    print(f" Bell fidelity vs PQEC round   eps_bar = {EPS_BAR}, q = {Q}, "
+          f"N = {N_ROUNDS}")
     print("=" * 78)
 
     print("\n[validation] one-round map vs the repository executors / closed forms")
@@ -295,10 +315,10 @@ def main():
             ("step3_raw", "step3", False),
             ("step4_raw", "step4", False),
             ("step5_uncalibrated", "step5", False)):
-        t0 = time.time()
+        t_run = time.time()
         runs[name] = run_dense(circuit, project)
         print(f"    {name:20s} circuit={circuit:9s} project_S_BD={str(project):5s} "
-              f"({time.time() - t0:.0f}s)")
+              f"({time.time() - t_run:.0f}s)")
     for name in ("step3", "step4"):
         runs[name + "_uv_closed_form"] = run_uv(name)
     print("    step3_uv_closed_form / step4_uv_closed_form  (notes 01/02 recursion)")
@@ -361,8 +381,8 @@ def main():
         script="scripts/generate_fidelity_vs_round.py",
         git_commit=commit,
         generated_utc=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-        condition=dict(t0=T0, eps0=1 - T0, q=Q, n_rounds=N_ROUNDS,
-                       rho0="1/4[II + t0(XX - YY + ZZ)]",
+        condition=dict(eps_bar=EPS_BAR, q=Q, n_rounds=N_ROUNDS,
+                       rho0="rho(eps_bar, eps_bar) = 1/4[II + eps_bar(XX - YY + ZZ)]",
                        fidelity="F_n = <Phi+|rho_n|Phi+> = Tr(Phi rho_n)"),
         model=dict(
             round_map="iterated_noisy_pqec.one_round_effective_map",

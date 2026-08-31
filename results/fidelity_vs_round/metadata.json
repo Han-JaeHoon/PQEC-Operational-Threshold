@@ -1,13 +1,12 @@
 {
   "script": "scripts/generate_fidelity_vs_round.py",
-  "git_commit": "1915ad6aeb87d5116ab07b0d4b5163b5156259ae",
-  "generated_utc": "2026-08-31T11:15:04Z",
+  "git_commit": "dab86cae07176f6fe692e40e7aa139d31bd6a5aa",
+  "generated_utc": "2026-08-31T14:17:49Z",
   "condition": {
-    "t0": 0.9,
-    "eps0": 0.09999999999999998,
+    "eps_bar": 0.9,
     "q": 0.01,
     "n_rounds": 5000,
-    "rho0": "1/4[II + t0(XX - YY + ZZ)]",
+    "rho0": "rho(eps_bar, eps_bar) = 1/4[II + eps_bar(XX - YY + ZZ)]",
     "fidelity": "F_n = <Phi+|rho_n|Phi+> = Tr(Phi rho_n)"
   },
   "model": {
