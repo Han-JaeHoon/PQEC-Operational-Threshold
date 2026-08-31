@@ -180,7 +180,73 @@ CIRCUITS = {
     "step3": ("textbook 16-CNOT", _qfunc_step3),
     "step4": ("resynthesized 14-CNOT", _qfunc_step4),
     "step5": ("learned 14-CNOT", _qfunc_step5),
+    # Step 5 with the learned circuit's residual mis-compilation of the IDEAL unitary
+    # removed (see compilation_correction below).  Same gate sequence, same noise model,
+    # same q, same noise locations -- only the O(1e-7) unitary residual is corrected.
+    "step5cal": ("learned 14-CNOT (exact-compilation calibrated)", _qfunc_step5),
 }
+
+# circuits that carry the exact-compilation correction, and the raw circuit they wrap
+_CALIBRATED = {"step5cal": "step5"}
+
+# the three physical decompositions -- the validators below compare these against the
+# repository's PennyLane executors and closed forms.  "step5cal" is deliberately NOT
+# one of them: it differs from "step5" by the exact-compilation correction, so it does
+# not reproduce the raw learned circuit's read-out (the gap IS the correction, ~1e-10
+# in F at q = 0.01), while it does reproduce rho^2/Tr(rho^2) at q = 0, which "step5"
+# cannot.
+PHYSICAL_CIRCUITS = ("step3", "step4", "step5")
+
+
+@functools.lru_cache(maxsize=None)
+def pqec_target_unitary():
+    """The exact ideal five-qubit PQEC unitary U = H_a CSWAP(a;A2,B2) CSWAP(a;A1,B1) H_a."""
+    U = _embed(qml.matrix(qml.Hadamard(0)), (0,))
+    U = _embed(qml.matrix(qml.CSWAP(wires=[0, 1, 3])), (0, 1, 3)) @ U
+    U = _embed(qml.matrix(qml.CSWAP(wires=[0, 2, 4])), (0, 2, 4)) @ U
+    U = _embed(qml.matrix(qml.Hadamard(0)), (0,)) @ U
+    return U
+
+
+@functools.lru_cache(maxsize=None)
+def circuit_unitary(circuit):
+    """Total noiseless 32x32 unitary realised by the circuit's gate sequence (q = 0)."""
+    ops, _ = build_program(circuit, 0.0)
+    U = np.eye(DIM, dtype=complex)
+    for kind, payload in ops:
+        if kind == "U":
+            U = payload @ U
+    return U
+
+
+@functools.lru_cache(maxsize=None)
+def compilation_correction(circuit):
+    """Near-identity C_corr with C_corr V = U_PQEC (exact-compilation calibration).
+
+    The learned Step-5 circuit reproduces U_PQEC only numerically (||V - U||_F ~ 2e-7),
+    which leaves a q-INDEPENDENT residual in the iterated map -- it survives at q = 0,
+    where tau_A must equal rho^2 exactly.  Following the note, align the global phase,
+    phi = arg Tr(U^dag V),  Vbar = e^{-i phi} V,  C_corr = U Vbar^dag,
+    and post-compose the round with C_corr.  This changes NOTHING in the noise model:
+    the depolarizing channels stay at the same CNOT locations with the same strength q.
+    It only replaces the mis-compiled ideal unitary by the exact target, so that the
+    q = 0 map is exactly rho -> rho^2/Tr(rho^2) and the remaining dynamics is genuine
+    CNOT-noise dynamics.
+    """
+    V = circuit_unitary(circuit)
+    U = pqec_target_unitary()
+    phi = float(np.angle(np.trace(U.conj().T @ V)))
+    Vbar = np.exp(-1j * phi) * V
+    return U @ Vbar.conj().T
+
+
+def compilation_residual(circuit):
+    """(max |Vbar - U|, ||Vbar - U||_F) for the phase-aligned noiseless circuit unitary."""
+    V = circuit_unitary(circuit)
+    U = pqec_target_unitary()
+    phi = float(np.angle(np.trace(U.conj().T @ V)))
+    D = np.exp(-1j * phi) * V - U
+    return float(np.max(np.abs(D))), float(np.linalg.norm(D))
 
 
 @functools.lru_cache(maxsize=None)
@@ -192,6 +258,10 @@ def build_program(circuit, q):
     """
     if circuit not in CIRCUITS:
         raise KeyError(f"unknown circuit {circuit!r}; choose from {list(CIRCUITS)}")
+    if circuit in _CALIBRATED:
+        base = _CALIBRATED[circuit]
+        ops, n_cnot = build_program(base, q)
+        return ops + (("U", compilation_correction(base)),), n_cnot
     raw = _tape_ops(CIRCUITS[circuit][1], q)
     ops, acc, n_cnot = [], np.eye(DIM, dtype=complex), 0
     for op in raw:
@@ -487,14 +557,14 @@ def validate_one_round(ts=(0.95, 0.9, 0.8, 0.7, 0.5), qs=(0.0, 1e-3, 1e-2, 5e-2,
     (b) the Step-3 / Step-4 closed forms.  Returns a dict of max abs errors."""
     from pqec_cnot_threshold import Q_denom, N_num, F_dec
 
-    err = {c: dict(Q=0.0, N=0.0, F=0.0) for c in CIRCUITS}
+    err = {c: dict(Q=0.0, N=0.0, F=0.0) for c in PHYSICAL_CIRCUITS}
     err_ana = {"step3": dict(Q=0.0, N=0.0, F=0.0), "step4": dict(Q=0.0, N=0.0, F=0.0)}
     err_ideal = 0.0
 
     for t in ts:
         rho = rho_isotropic(t)
         for q in qs:
-            for c in CIRCUITS:
+            for c in PHYSICAL_CIRCUITS:
                 tau = one_round_tau(rho, q, c)
                 Q = float(np.real(np.trace(tau)))
                 N = float(np.real(np.trace(PHI @ tau)))
@@ -523,13 +593,13 @@ def validate_one_round(ts=(0.95, 0.9, 0.8, 0.7, 0.5), qs=(0.0, 1e-3, 1e-2, 5e-2,
             err_ana["step4"]["F"] = max(err_ana["step4"]["F"], abs(N4 / Q4 - N4a / Q4a))
 
         # ideal map must be exactly rho^2 / Tr(rho^2)
-        for c in CIRCUITS:
+        for c in PHYSICAL_CIRCUITS:
             tau0 = one_round_tau(rho, 0.0, c)
             err_ideal = max(err_ideal, float(np.linalg.norm(tau0 - rho @ rho)))
 
     if verbose:
         print("  one-round validation (dense map vs repository executors)")
-        for c in CIRCUITS:
+        for c in PHYSICAL_CIRCUITS:
             print(f"    {c}: max|dQ| = {err[c]['Q']:.2e}, max|dN| = {err[c]['N']:.2e}, "
                   f"max|dF| = {err[c]['F']:.2e}")
         print("  one-round validation (dense map vs closed forms)")
@@ -557,7 +627,7 @@ def selftest(verbose=True):
     if verbose:
         print(f"  replacement channel (definition) vs global_depol_kraus: "
               f"max||.|| = {worst:.2e}")
-    for c in CIRCUITS:
+    for c in PHYSICAL_CIRCUITS:
         assert n_cnots(c) == (16 if c == "step3" else 14), c
     if verbose:
         print(f"  CNOT counts: " + ", ".join(f"{c}={n_cnots(c)}" for c in CIRCUITS))
