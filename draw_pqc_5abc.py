@@ -20,7 +20,9 @@ Outputs:
 
 Run:  python draw_pqc_5abc.py
 """
+import io
 import json
+
 import numpy as np
 import pennylane as qml
 import matplotlib.pyplot as plt
@@ -90,7 +92,7 @@ def draw(mask, params, fname, title):
     blocks, cnots = merged_circuit(mask, params)
     ov = _verify(blocks, cnots, mask, params)
     fig, ax = qml.draw_mpl(_build_qnode(blocks, cnots), wire_order=range(5),
-                           show_all_wires=True)()
+                           show_all_wires=True, style="pennylane")()
     for i, lab in WIRE_LABELS.items():
         ax.text(-1.6, i, lab, ha="right", va="center", fontsize=11)
     ax.set_title(f"{title}\n{len(cnots)} CNOTs, {len(cnots)+1} rotation blocks "
@@ -104,35 +106,83 @@ def draw(mask, params, fname, title):
 # ---------------------------------------------------------------------------
 # analytic spec (exact primitive gate list + merged SU(2) blocks) for GPT
 # ---------------------------------------------------------------------------
-def _build_raw_qnode(mask, params):
-    """QNode of the EXACT ansatz: RX/RY/RZ per wire + CNOTs, no merging."""
+def _build_raw_qnode(mask, params, barriers=False):
+    """QNode of the EXACT ansatz: RX/RY/RZ per wire + CNOTs, no merging.
+
+    With `barriers=True` a visual-only barrier is placed on both sides of every
+    CNOT, so the drawing reads as the alternating structure it really is:
+    rotation layer L_0 | CNOT C_1 | L_1 | C_2 | ...  The barriers carry
+    `only_visual=True` and therefore change nothing about the circuit.
+    """
     ops = ansatz_masked(mask)
     gate = {"rx": qml.RX, "ry": qml.RY, "rz": qml.RZ}
 
     def circuit():
+        prev = None
         for op in ops:
+            kind_now = "g" if op[0] == "g" else "cx"
+            # one barrier at each rotation-layer <-> CNOT boundary, never two in a row
+            if barriers and prev is not None and kind_now != prev:
+                qml.Barrier(wires=range(5), only_visual=True)
             if op[0] == "g":
                 _, kind, w, p = op
                 gate[kind](params[p], wires=w)
             else:
                 qml.CNOT(wires=[op[1], op[2]])
+            prev = kind_now
         return qml.state()
     return circuit
 
 
-def draw_raw(mask, params, fname, title):
-    """Draw the exact RX-RY-RZ + CNOT ansatz (all rotation layers kept)."""
+def draw_raw(mask, params, fname, title, max_length=30, dpi=110):
+    """Draw the exact RX-RY-RZ + CNOT ansatz (all rotation layers kept).
+
+    The primitive form is ~120 columns wide, so it is wrapped into several rows
+    with `max_length`.  PennyLane returns one (fig, ax) per row; we render each
+    row and stack them into a single image, which keeps the drawer's own
+    rendering (`style="pennylane"`, matching the Step-3 / Step-4 figures).
+    """
     ncx = sum(mask)
-    fig, ax = qml.draw_mpl(_build_raw_qnode(mask, params), wire_order=range(5),
-                           show_all_wires=True)()
-    for i, lab in WIRE_LABELS.items():
-        ax.text(-2.2, i, lab, ha="right", va="center", fontsize=11)
-    ax.set_title(f"{title}\n{ncx} CNOTs; exact ansatz = initial RX-RY-RZ layer + a full "
-                 f"RX-RY-RZ layer after every CNOT slot (19 rotation layers, 285 params)",
-                 fontsize=12)
-    fig.savefig(fname, dpi=110, bbox_inches="tight")
+    rows = qml.draw_mpl(_build_raw_qnode(mask, params, barriers=True),
+                        wire_order=range(5), show_all_wires=True,
+                        style="pennylane", max_length=max_length)()
+    if not isinstance(rows, list):
+        rows = [rows]
+
+    imgs = []
+    for k, (f, a) in enumerate(rows):
+        for i, lab in WIRE_LABELS.items():
+            a.text(-2.4, i, lab, ha="right", va="center", fontsize=11)
+        a.text(-2.4, -0.9, f"part {k + 1} of {len(rows)}", ha="right", va="center",
+               fontsize=10, style="italic", color="0.35")
+        buf = io.BytesIO()
+        f.savefig(buf, format="png", dpi=dpi, bbox_inches="tight",
+                  facecolor="white")
+        plt.close(f)
+        buf.seek(0)
+        imgs.append(plt.imread(buf))
+
+    gap = 24                                        # px between rows
+    W = max(im.shape[1] for im in imgs)
+    head = 300                                      # px reserved for the title
+    H = head + sum(im.shape[0] for im in imgs) + gap * (len(imgs) - 1)
+    fig = plt.figure(figsize=(W / dpi, H / dpi), dpi=dpi, facecolor="white")
+    y = H - head
+    for im in imgs:
+        h, w = im.shape[0], im.shape[1]
+        ax = fig.add_axes([0.0, (y - h) / H, w / W, h / H])
+        ax.imshow(im)
+        ax.axis("off")
+        y -= h + gap
+    fig.text(0.5, 1 - 0.28 * head / H,
+             f"{title}\n{ncx} CNOTs; exact ansatz = initial RX-RY-RZ layer + a full "
+             f"RX-RY-RZ layer after every CNOT slot (19 rotation layers, 285 params).\n"
+             f"Barriers are visual only: they separate each rotation layer from the "
+             f"CNOT that follows it.  Read the parts top to bottom.",
+             ha="center", va="center", fontsize=22, linespacing=1.6)
+    fig.savefig(fname, dpi=dpi, bbox_inches="tight", facecolor="white")
     plt.close(fig)
-    print(f"  wrote {fname}")
+    print(f"  wrote {fname}  ({len(rows)} rows)")
 
 
 def _primitive_lines(mask, params):
