@@ -349,61 +349,80 @@
 % ===========================================================================
 % 6. Equivalence
 % ===========================================================================
-\begin{frame}{6 \quad Equivalence of the 5Q and 6Q estimators}{The LOCC protocol computes exactly what the shared-ancilla protocol computes}
-  \footnotesize
-  \vspace{0.6ex}
+\begin{frame}{6 \quad Equivalence of the 5Q and 6Q estimators}{Proved exactly under the per-CNOT noise model --- for Type 3 \emph{and} Type 4}
+  \scriptsize
+  \vspace{0.9ex}
   \begin{columns}[T,onlytextwidth]
-  \begin{column}{0.46\textwidth}\vspace{0pt}
-    \textbf{Ideal case.} \stat{proved}\;
-    With $S=S_AS_B$ and $R$ \emph{any} four-qubit input,
+  \begin{column}{0.455\textwidth}\vspace{0pt}
+    \textbf{Theorem.} \stat{proved}\;
+    Same local Fredkin block on both sides, same CNOT positions, the same
+    replacement-depolarizing channel after every CNOT. Then
     \[
-      \underbrace{C_{XX}(O)-C_{YY}(O)}_{\text{6Q}}
-        =\tfrac12\Tr\!\bigl[\bar O\,(RS+SR)\bigr]
-        =\underbrace{\avg{X_c\otimes\bar O}}_{\text{5Q}} .
+      \Delta^{5Q}_q(O;R)=\Delta^{6Q}_q(O;R)
+        =\operatorname{Re}\Tr\!\bigl[\bar O\,W_q(R)\bigr]
     \]
-    \emph{Mechanism:}
-    $X\!\otimes\!X-Y\!\otimes\!Y=2(\ketbra{00}{11}+\ketbra{11}{00})$, so the
-    $S_A\!\leftrightarrow\!S_B$ coherences cancel and only the ``neither
-    swapped'' $\leftrightarrow$ ``both swapped'' interference survives ---
-    precisely the single-ancilla SWAP interference.
+    for \emph{every} $q\in[0,1]$, \emph{every} four-qubit input $R$ and
+    \emph{every} Hermitian $O$ on the retained pair.
     \smallskip
 
-    For $R=\rho\otimes\rho$ this is $\Tr(O\rho^{2})$; with $O=I$, the purity.
+    No Bell-diagonal, isotropic, identical-copy or closed-form assumption
+    enters --- $R=\rho\otimes\rho$ is only a special case.
+    \smallskip
+
+    Hence $T^{5Q}_q=T^{6Q}_q$ and $R^{5Q}_q=R^{6Q}_q$: \acc{the same effective
+    operator and the same normalised estimator}, so the same Bell-diagonal
+    map, the same fixed points, the same thresholds.
+    \smallskip
+
+    At $q=0$ both give $\Tr(O\rho^{2})$; for $q>0$ the common estimator is
+    something else, but the two implementations stay exactly equal.
+    \smallskip
+
+    \unit{Type 4 first needs the $7+7$ regrouping of slide 5 --- an equality
+    of the complete noisy \emph{channels}, not only of the unitaries.}
   \end{column}
-  \begin{column}{0.50\textwidth}\vspace{0pt}
-    \textbf{Noisy case --- tested, not assumed.} \stat{numerical}\\[0.4ex]
-    Raw, unnormalised $\Delta_5$ vs.\ $\Delta_6$ at identical per-CNOT noise:
+  \begin{column}{0.505\textwidth}\vspace{0pt}
+    \textbf{Why --- the ancilla $01$ block is closed}\\[0.5ex]
+    Write $X_{rs}=\bra{r}_{c}X\ket{s}_{c}$. Every operation of the noisy
+    local block sends the $01$ block to the $01$ block:
     \smallskip
 
-    \centering\scriptsize
-    \begin{tabular}{@{}l c c@{}}
+    \setlength{\tabcolsep}{4pt}
+    \begin{tabular}{@{}l l@{}}
       \toprule
-       & Type 3 / 6Q-L16 & Type 4 / 6Q-L14\\
+      operation & action on $X_{01}$\\
       \midrule
-      comparisons                & 97\,440 & 97\,440\\\rowgap
-      $\max|\Delta_5-\Delta_6|$  & \acc{$7.77\times10^{-16}$} & \acc{$5.55\times10^{-16}$}\\\rowgap
-      mean                       & $2.1\times10^{-17}$ & $1.5\times10^{-17}$\\\rowgap
-      $\Delta_5(I)$ vs $\Delta_6(I)$ & $7.8\times10^{-16}$ & $4.4\times10^{-16}$\\\rowgap
-      $|\Omega_5-2\Omega_6|$     & $2.8\times10^{-16}$ & $1.7\times10^{-16}$\\\rowgap
-      negative controls          & $\ge4.8\times10^{-4}$ & $\ge5.3\times10^{-4}$\\
+      data-only unitary $V$        & $VX_{01}V^{\dagger}$\\\rowgap
+      diagonal ancilla phase $T_c$ & $e^{-i\pi/4}X_{01}$\\\rowgap
+      ancilla-controlled $\mathrm{CNOT}_{c\to t}$ & $X_{01}X_t$\\\rowgap
+      depolarizing on two data qubits & the same replacement channel\\\rowgap
+      depolarizing on $(c,t)$      & $\qb\,X_{01}$ \unit{(since $\bra{0}I_c\ket{1}=0$)}\\
       \bottomrule
     \end{tabular}
     \smallskip
 
-    \raggedright
-    94 two-qubit states $\times$ 56 observables $\times$ 15 values of
-    $q\in[0,1]$, plus 22 \emph{arbitrary} four-qubit inputs $R$ --- the
-    equality does not need two identical copies.
+    so $[\mathcal{G}_q(X)]_{01}=\mathcal{K}_q(X_{01})$: diagonal ancilla
+    blocks never feed the off-diagonal one.
+    \smallskip
+
+    5Q stores $\tfrac12 W_q(R)$ in its \emph{single}-ancilla $01$ block;
+    6Q stores $\tfrac14 W_q(R)$ in the \emph{two}-ancilla $00,11$ block.
+    The factor two is repaid exactly by
+    \[
+      X_aX_b-Y_aY_b=2\bigl(\ketbra{00}{11}+\ketbra{11}{00}\bigr).
+    \]
   \end{column}
   \end{columns}
-  \vfill
-  {\footnotesize
-   \textbf{Consequence.}\; The quantum-communication protocol (5Q) and the
-   LOCC protocol (6Q) are \acc{the same estimator under the same noise}.
-   Going LOCC costs one extra ancilla and removes every cross-party
-   two-qubit gate --- at no statistical cost.
-   \warn{Open:} the noisy equality as a theorem.}
-  \vspace{0.4ex}
+  \vspace{0.6ex}
+
+  {\scriptsize
+   \textbf{Scope.}\; The proof needs that closure: revisit it for an
+   ancilla-mixing Fredkin synthesis, asymmetric noise on the two controls,
+   noisy $X/Y$ read-out in 6Q, or transmission noise on the shared 5Q
+   ancilla. \textbf{Equal estimator is not equal cost} --- 5Q needs one
+   shared flying ancilla, 6Q two local ancillas and two settings.\;
+   \unit{The 97\,440-point comparison ($\le7.8\times10^{-16}$) now confirms
+   the theorem instead of standing in for it.}}
 \end{frame}
 
 % ===========================================================================
@@ -700,33 +719,33 @@
   \begin{column}{0.46\textwidth}\vspace{0pt}
     \textbf{Settled}
     \begin{itemize}\itemsep0.25ex
-      \item exact noisy Bell-diagonal maps and fixed points for 4Q, Type 3
-            and Type 4, with \acc{$q_{\mathrm{SN}}$, $q_{\mathrm{ent}}$}
-            in closed form;
+      \item exact noisy Bell-diagonal maps and fixed points for 4Q,
+            Type 3, Type 4, with \acc{$q_{\mathrm{SN}}$,
+            $q_{\mathrm{ent}}$} in closed form;
       \item Fredkin-level depolarizing is self-mitigating --- the threshold
             lives in the \emph{decomposition};
       \item the 14-CNOT Type-4 circuit factorises into two
-            $e^{-i\pi/8}\!\times\!$Fredkin blocks, making 6Q-L14 well
-            defined;
-      \item 5Q $\equiv$ 6Q as estimators: proved ideally, $10^{5}$
-            comparisons at $10^{-16}$ under noise;
-      \item $q_{\mathrm{abs}}\le q_{\mathrm{rel}}\le q_{\mathrm{th}}$ at
-            every tested point, and
-            $q_{\mathrm{th}}^{\mathrm{full}}<q_{\mathrm{th}}^{\mathrm{first}}$
-            for Type 3/4.
+            $e^{-i\pi/8}\!\times\!$Fredkin blocks, defining 6Q-L14;
+      \item 5Q\,$\equiv$\,6Q as estimators \emph{with the noise included}:
+            proved for Type 3 and Type 4, arbitrary $R$, $O$, $q$;
+      \item $q_{\mathrm{abs}}\le q_{\mathrm{rel}}\le q_{\mathrm{th}}$
+            everywhere tested, and $q_{\mathrm{th}}^{\mathrm{full}}<
+            q_{\mathrm{th}}^{\mathrm{first}}$ for Type 3/4.
     \end{itemize}
-    \medskip
+    \smallskip
 
     \textbf{Open --- analytic}
-    \begin{itemize}\itemsep0.25ex
+    \begin{itemize}\itemsep0.15ex
       \item a closed form for $q_{\mathrm{th}}(\varepsilon)$, for any
             protocol;
-      \item why the all-round and one-round thresholds coincide for 4Q and
-            strictly do not for Type 3/4; where the binding round returns
-            to 0 (the $\varepsilon=0.75$ rows are unresolved);
-      \item the noisy 5Q $\equiv$ 6Q equality as a theorem;
-      \item a symbolic proof of the Type 3/4 two-sided Pauli covariance for
-            all $q$ (checked at four values so far).
+      \item why all-round and one-round thresholds coincide for 4Q but
+            strictly not for Type 3/4, and where the binding round
+            returns to 0;
+      \item how far that equality survives once the ancilla-block
+            closure is broken (mixing syntheses, asymmetric noise, noisy
+            6Q read-out);
+      \item a symbolic proof of the Type 3/4 two-sided Pauli covariance
+            for all $q$.
     \end{itemize}
   \end{column}
   \begin{column}{0.50\textwidth}\vspace{0pt}
@@ -755,7 +774,7 @@
     \medskip
 
     \textbf{For the paper}\; freeze the protocol table and the three
-    threshold tables; promote the two $10^{-16}$ equivalences to lemmas;
+    threshold tables; fold the two equivalence proofs in as lemmas;
     one figure set, one reproducibility appendix.
   \end{column}
   \end{columns}
