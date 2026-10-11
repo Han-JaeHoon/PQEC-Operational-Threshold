@@ -1,0 +1,35 @@
+\documentclass[border=5pt,tikz]{standalone}
+\input{circuitstyle}
+\begin{document}
+\begin{tikzpicture}[x=1cm,y=1cm]
+\def\ya{4.0}\def\yb{3.0}\def\yc{2.0}\def\yd{1.0}\def\ye{0.0}
+\def\xl{1.35}\def\xr{7.05}
+\path (-0.62,\ye-0.85) (12.55,\ya+0.80);   % common bounding box
+
+\qwire{\ya}{\xl}{\xr}\qwire{\yb}{\xl}{\xr}\qwire{\yc}{\xl}{\xr}
+\qwire{\yd}{\xl}{6.35}\qwire{\ye}{\xl}{6.35}
+
+\node at (0.72,\ya) {\large $a:\ \ket{0}$};
+\qbrace{0.42}{\yb+0.42}{\yc-0.42}{\rho}
+\qbrace{0.42}{\yd+0.42}{\ye-0.42}{\rho}
+\node at (0.96,\yb) {$A_1$};\node at (0.96,\yc) {$B_1$};
+\node at (0.96,\yd) {$A_2$};\node at (0.96,\ye) {$B_2$};
+
+\qgate{2.05}{\ya}{H}
+\qlink{3.15}{\ya}{\yd}\qctrl{3.15}{\ya}\qswap{3.15}{\yb}\qswap{3.15}{\yd}
+\qlink{4.35}{\ya}{\ye}\qctrl{4.35}{\ya}\qswap{4.35}{\yc}\qswap{4.35}{\ye}
+\qgate{5.45}{\ya}{H}
+
+\qmeter{6.60}{\ya}
+\qmeterbig{6.60}{\yb}{\yc}{}
+\qtrash{6.62}{\yd}\qtrash{6.62}{\ye}
+
+\node[right=6pt,align=left] at (7.00,\ya) {\lblsm{measure $Z_a$}};
+\node[right=6pt,align=left] at (7.00,{(\yb+\yc)/2}) {\lblsm{measure $O$}};
+\node[right=6pt,align=left] at (7.00,{(\yd+\ye)/2}) {\lblsm{discarded}};
+\node[anchor=north west,align=left] at (0.10,\ye-0.55)
+  {\lblsm{5Q \ shared ancilla}\;\note{---
+   $\avg{Z_a\otimes O}/\avg{Z_a\otimes I}=\operatorname{Tr}(O\rho^{2})/
+   \operatorname{Tr}\rho^{2}$}};
+\end{tikzpicture}
+\end{document}
