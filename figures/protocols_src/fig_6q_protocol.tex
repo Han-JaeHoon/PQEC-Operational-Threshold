@@ -1,0 +1,86 @@
+\documentclass[border=6pt,tikz]{standalone}
+\input{circuitstyle}
+\begin{document}
+\begin{tikzpicture}[x=1cm,y=1cm]
+
+\def\ya{5.0}   % ancilla a   (Alice)
+\def\yb{4.0}   % A1
+\def\yc{3.0}   % B1
+\def\yd{2.0}   % A2
+\def\ye{1.0}   % B2
+\def\yf{0.0}   % ancilla b   (Bob)
+
+\def\xl{1.35}
+\def\xr{8.05}
+
+\qwire{\ya}{\xl}{\xr}
+\qwire{\yb}{\xl}{\xr}
+\qwire{\yc}{\xl}{\xr}
+\qwire{\yd}{\xl}{7.38}
+\qwire{\ye}{\xl}{7.38}
+\qwire{\yf}{\xl}{\xr}
+
+% ---- inputs --------------------------------------------------------------
+\node at (0.72,\ya) {\large $a:\ \ket{0}$};
+\node at (0.72,\yf) {\large $b:\ \ket{0}$};
+\qbrace{0.42}{\yb+0.42}{\yc-0.42}{\rho}
+\qbrace{0.42}{\yd+0.42}{\ye-0.42}{\rho}
+\node at (0.96,\yb) {$A_1$};
+\node at (0.96,\yc) {$B_1$};
+\node at (0.96,\yd) {$A_2$};
+\node at (0.96,\ye) {$B_2$};
+
+% ---- local Hadamards -----------------------------------------------------
+\qgate{2.00}{\ya}{H}
+\qgate{2.00}{\yf}{H}
+
+% ---- Alice's controlled-SWAP  A1 <-> A2  (wires a, A1, A2 only) ----------
+\qlink{3.15}{\ya}{\yd}\qctrl{3.15}{\ya}\qswap{3.15}{\yb}\qswap{3.15}{\yd}
+% ---- Bob's controlled-SWAP    B1 <-> B2  (wires b, B1, B2 only) ----------
+\qlink{4.35}{\yf}{\yc}\qctrl{4.35}{\yf}\qswap{4.35}{\ye}\qswap{4.35}{\yc}
+
+% ---- read-out rotation: present only in the YY run -----------------------
+\qgatedash{5.50}{\ya}{S^{\dagger}}
+\qgatedash{5.50}{\yf}{S^{\dagger}}
+\qgate{6.55}{\ya}{H}
+\qgate{6.55}{\yf}{H}
+
+\qmeter{7.55}{\ya}
+\qmeter{7.55}{\yf}
+\qmeterbig{7.55}{\yb}{\yc}{}
+\qtrash{7.55}{\yd}
+\qtrash{7.55}{\ye}
+
+% ---- right-hand annotations ----------------------------------------------
+\node[right=8pt,align=left] at (\xr,\ya) {\lblsm{Alice's ancilla}};
+\node[right=8pt,align=left] at (\xr,\yf) {\lblsm{Bob's ancilla}};
+\node[right=8pt,align=left] at (\xr,{(\yb+\yc)/2})
+  {\lblsm{measure the intended}\\[1pt]\lblsm{observable $O$ on $(A_1,B_1)$}};
+\node[right=8pt,align=left] at (\xr,{(\yd+\ye)/2}) {\lblsm{discarded}};
+
+% ---- the two settings ----------------------------------------------------
+\draw[line width=0.9pt,gray!70,densely dashed,rounded corners=3pt]
+  (5.05,\yf-0.55) rectangle (5.95,\ya+0.55);
+\node[anchor=north,align=center] at (5.50,\yf-0.62)
+  {\lblsm{two settings}};
+
+\node[anchor=west,align=left] at (0.42,-1.50)
+  {\lblsm{run 1 \ ($S^{\dagger}$ omitted):}\quad
+   $C_{XX}(O)=\avg{X_aX_b\otimes O_{A_1B_1}}$};
+\node[anchor=west,align=left] at (0.42,-2.25)
+  {\lblsm{run 2 \ ($S^{\dagger}$ applied):}\quad
+   $C_{YY}(O)=\avg{Y_aY_b\otimes O_{A_1B_1}}$};
+\node[anchor=west,align=left] at (0.42,-3.15)
+  {$\displaystyle\Delta(O)=C_{XX}(O)-C_{YY}(O)=\operatorname{Tr}(O\rho^{2}),
+    \qquad
+    \avg{O}_{\mathrm{VD}}=\frac{\Delta(O)}{\Delta(I)}
+    =\frac{\operatorname{Tr}(O\rho^{2})}{\operatorname{Tr}\rho^{2}}$};
+
+\node[anchor=west,align=left] at (0.42,-4.20)
+  {\note{\textbf{Both} runs are needed --- a single $XX$ setting is not the
+         estimator.\quad
+         Alice holds $\{a,A_1,A_2\}$ and Bob holds $\{b,B_1,B_2\}$:
+         no two-qubit gate crosses the cut.}};
+
+\end{tikzpicture}
+\end{document}

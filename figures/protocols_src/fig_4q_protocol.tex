@@ -1,0 +1,63 @@
+\documentclass[border=6pt,tikz]{standalone}
+\input{circuitstyle}
+\begin{document}
+\begin{tikzpicture}[x=1cm,y=1cm]
+
+% ---- wire rows -----------------------------------------------------------
+\def\ya{3.0}   % A1  retained
+\def\yb{2.0}   % B1  retained
+\def\yc{1.0}   % A2  measured
+\def\yd{0.0}   % B2  measured
+
+\def\xl{1.05}  % wire start
+\def\xr{8.60}  % wire end (retained pair)
+\def\xm{7.45}  % wire end (measured pair)
+
+\qwire{\ya}{\xl}{\xr}
+\qwire{\yb}{\xl}{\xr}
+\qwire{\yc}{\xl}{\xm}
+\qwire{\yd}{\xl}{\xm}
+
+% ---- input registers -----------------------------------------------------
+\qbrace{0.20}{\ya+0.42}{\yb-0.42}{\rho}
+\qbrace{0.20}{\yc+0.42}{\yd-0.42}{\rho}
+\node at (0.66,\ya) {$A_1$};
+\node at (0.66,\yb) {$B_1$};
+\node at (0.66,\yc) {$A_2$};
+\node at (0.66,\yd) {$B_2$};
+
+% ---- the five CNOTs ------------------------------------------------------
+\qlink{1.75}{\yc}{\yd}\qctrl{1.75}{\yc}\qtarg{1.75}{\yd}   % A2 -> B2
+\qlink{2.65}{\yb}{\yd}\qctrl{2.65}{\yb}\qtarg{2.65}{\yd}   % B1 -> B2
+\qlink{3.55}{\ya}{\yd}\qctrl{3.55}{\ya}\qtarg{3.55}{\yd}   % A1 -> B2
+\qlink{4.45}{\yc}{\yb}\qctrl{4.45}{\yc}\qtarg{4.45}{\yb}   % A2 -> B1
+\qlink{5.35}{\yc}{\ya}\qctrl{5.35}{\yc}\qtarg{5.35}{\ya}   % A2 -> A1
+
+% ---- Hadamard on A2 ------------------------------------------------------
+\qgate{6.25}{\yc}{H}
+
+% ---- measurements on the lower pair --------------------------------------
+\qmeter{7.10}{\yc}
+\qmeter{7.10}{\yd}
+\node[right=2pt] at (\xm,\yc) {$m_1$};
+\node[right=2pt] at (\xm,\yd) {$m_2$};
+
+\draw[line width=1.0pt,decorate,decoration={brace,amplitude=5pt}]
+  (8.00,\yc+0.32) -- (8.00,\yd-0.32);
+\node[right=7pt,align=left] at (8.00,{(\yc+\yd)/2})
+  {\lbl{postselect}\\[2pt]$(m_1,m_2)=(0,0)$};
+
+% ---- retained output -----------------------------------------------------
+\draw[line width=1.0pt,decorate,decoration={brace,amplitude=5pt}]
+  (\xr+0.10,\ya+0.42) -- (\xr+0.10,\yb-0.42);
+\node[right=7pt,align=left] at (\xr+0.10,{(\ya+\yb)/2})
+  {$\dfrac{\rho^{2}}{\operatorname{Tr}\rho^{2}}$\\[4pt]
+   \lblsm{physically retained}};
+
+% ---- footnote ------------------------------------------------------------
+\node[anchor=west,align=left] at (0.20,-1.05)
+  {\note{A genuine two-qubit state is produced, not a statistic.\quad
+         $P_{\mathrm{succ}}=\operatorname{Tr}\rho^{2}$}};
+
+\end{tikzpicture}
+\end{document}

@@ -1,0 +1,45 @@
+\documentclass[border=5pt,tikz]{standalone}
+\input{circuitstyle}
+\begin{document}
+\begin{tikzpicture}[x=1cm,y=1cm]
+\def\ya{5.0}\def\yb{4.0}\def\yc{3.0}\def\yd{2.0}\def\ye{1.0}\def\yf{0.0}
+\def\xl{1.35}\def\xr{7.80}
+\path (-0.62,\yf-1.35) (12.55,\ya+0.80);   % common bounding box
+
+\qwire{\ya}{\xl}{\xr}\qwire{\yb}{\xl}{\xr}\qwire{\yc}{\xl}{\xr}
+\qwire{\yd}{\xl}{7.12}\qwire{\ye}{\xl}{7.12}\qwire{\yf}{\xl}{\xr}
+
+\node at (0.72,\ya) {\large $a:\ \ket{0}$};
+\node at (0.72,\yf) {\large $b:\ \ket{0}$};
+\qbrace{0.42}{\yb+0.42}{\yc-0.42}{\rho}
+\qbrace{0.42}{\yd+0.42}{\ye-0.42}{\rho}
+\node at (0.96,\yb) {$A_1$};\node at (0.96,\yc) {$B_1$};
+\node at (0.96,\yd) {$A_2$};\node at (0.96,\ye) {$B_2$};
+
+\qgate{2.00}{\ya}{H}\qgate{2.00}{\yf}{H}
+\qlink{3.10}{\ya}{\yd}\qctrl{3.10}{\ya}\qswap{3.10}{\yb}\qswap{3.10}{\yd}
+\qlink{4.30}{\yf}{\yc}\qctrl{4.30}{\yf}\qswap{4.30}{\ye}\qswap{4.30}{\yc}
+\qgatedash{5.40}{\ya}{S^{\dagger}}\qgatedash{5.40}{\yf}{S^{\dagger}}
+\qgate{6.35}{\ya}{H}\qgate{6.35}{\yf}{H}
+
+\qmeter{7.30}{\ya}\qmeter{7.30}{\yf}
+\qmeterbig{7.30}{\yb}{\yc}{}
+\qtrash{7.32}{\yd}\qtrash{7.32}{\ye}
+
+\node[right=6pt,align=left] at (\xr,\ya) {\lblsm{Alice}};
+\node[right=6pt,align=left] at (\xr,\yf) {\lblsm{Bob}};
+\node[right=6pt,align=left] at (\xr,{(\yb+\yc)/2}) {\lblsm{measure $O$}};
+\node[right=6pt,align=left] at (\xr,{(\yd+\ye)/2}) {\lblsm{discarded}};
+
+\draw[line width=0.9pt,gray!70,densely dashed,rounded corners=3pt]
+  (4.95,\yf-0.52) rectangle (5.85,\ya+0.52);
+
+\node[anchor=north west,align=left] at (0.10,\yf-0.60)
+  {\lblsm{6Q \ LOCC}\;\note{--- no $S^{\dagger}$: $C_{XX}=\avg{X_aX_b\otimes O}$;\;
+   with $S^{\dagger}$: $C_{YY}=\avg{Y_aY_b\otimes O}$}};
+\node[anchor=north west,align=left] at (0.10,\yf-1.00)
+  {\note{\textbf{both} runs:\;
+   $\Delta(O)=C_{XX}-C_{YY}=\operatorname{Tr}(O\rho^{2})$,\;
+   $\avg{O}_{\mathrm{VD}}=\Delta(O)/\Delta(I)$}};
+\end{tikzpicture}
+\end{document}
