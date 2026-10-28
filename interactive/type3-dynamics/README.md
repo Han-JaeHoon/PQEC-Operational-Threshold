@@ -11,7 +11,9 @@ double precision, so it is **not** an analytic proof or an infinite-round certif
 
 ## Run (macOS)
 
-Requires Node.js 18 or newer (`node -v`; install with `brew install node` if needed).
+Requires Node.js 20 or newer, 22 LTS recommended (`node -v`; install with `brew install node` if needed).
+The folder carries its own `.npmrc` (`legacy-peer-deps=true`) to work around an npm 10 crash
+when it resolves vitest's optional peer dependencies; no extra flag is needed.
 
 ```bash
 cd interactive/type3-dynamics
