@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Type-3 PQEC Dynamics</title>
+</head>
+<body>
+  <header class="top">
+    <div class="title">
+      <h1>Type-3 noisy PQEC — round-by-round dynamics</h1>
+      <p class="conv">
+        Textbook 16-CNOT gadget · two-qubit replacement depolarizing <i>q</i> after every CNOT ·
+        input (1−ε)|Φ⁺⟩⟨Φ⁺| + ε I/4 · exact map on the invariant plane
+        u = ⟨XX⟩ = −⟨YY⟩, v = ⟨ZZ⟩, u₀ = v₀ = 1−ε
+      </p>
+    </div>
+    <div class="controls">
+      <div class="ctl">
+        <label for="eps-num">Initial noise ε</label>
+        <input id="eps-range" type="range" min="0" max="1" step="0.0001" value="0.1" />
+        <input id="eps-num" type="number" min="0" max="1" step="0.001" value="0.1" />
+      </div>
+      <div class="ctl">
+        <label for="q-num">CNOT noise q</label>
+        <input id="q-range" type="range" min="0" max="0.2" step="0.00001" value="0.0327" />
+        <input id="q-num" type="number" min="0" max="1" step="0.0001" value="0.0327" />
+        <label class="chk"><input id="q-full" type="checkbox" /> 0–1</label>
+      </div>
+      <div class="ctl">
+        <label for="n-num">Rounds N</label>
+        <input id="n-range" type="range" min="1" max="500" step="1" value="30" />
+        <input id="n-num" type="number" min="1" max="500" step="1" value="30" />
+      </div>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="charts">
+      <div class="panel">
+        <div class="panel-head">
+          <h2>Bell fidelity F<sub>n</sub></h2>
+          <div class="seg" role="radiogroup" aria-label="F axis">
+            <label><input type="radio" name="faxis" value="auto" checked /> auto-zoom</label>
+            <label><input type="radio" name="faxis" value="fixed" /> 0–1</label>
+          </div>
+        </div>
+        <div id="chart-f" class="chart chart-lg"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head">
+          <h2>Bell populations p<sub>β</sub><sup>(n)</sup></h2>
+          <span class="hint">click legend to show/hide</span>
+        </div>
+        <div id="chart-p" class="chart"></div>
+      </div>
+      <div class="panel">
+        <div class="panel-head">
+          <h2>Fidelity change ΔF<sub>n</sub> = F<sub>n+1</sub> − F<sub>n</sub></h2>
+          <div class="seg" role="radiogroup" aria-label="dF axis">
+            <label><input type="radio" name="daxis" value="lin" checked /> linear</label>
+            <label><input type="radio" name="daxis" value="asinh" /> signed log</label>
+          </div>
+        </div>
+        <div id="chart-d" class="chart"></div>
+        <p id="precision-warn" class="warn" hidden></p>
+      </div>
+    </section>
+
+    <aside class="side">
+      <div class="panel">
+        <div class="panel-head"><h2>Round inspector</h2></div>
+        <div class="ctl ctl-inline">
+          <label for="sel-num">n</label>
+          <input id="sel-range" type="range" min="0" max="30" step="1" value="0" />
+          <input id="sel-num" type="number" min="0" max="30" step="1" value="0" />
+        </div>
+        <p class="hint">or click a point in any chart · drag across a chart to zoom rounds (y re-fits) · double-click to reset</p>
+        <table id="inspector" class="kv"></table>
+      </div>
+      <div class="panel">
+        <div class="panel-head"><h2>Summary (rounds 0…N)</h2></div>
+        <table id="summary" class="kv"></table>
+      </div>
+    </aside>
+  </main>
+
+  <footer class="foot">
+    <span>Finite-round numerical evaluation of the exact Type-3 map in IEEE-754 double precision —
+      not an analytic proof or an infinite-round certificate.</span>
+    <span id="timing" class="timing"></span>
+  </footer>
+
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>

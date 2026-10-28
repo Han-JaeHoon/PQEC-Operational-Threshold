@@ -1,0 +1,22 @@
+{
+  "name": "type3-interactive-dynamics",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Local interactive simulator for the Type-3 (16-CNOT) noisy PQEC exact Bell-diagonal map",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "uplot": "1.6.32"
+  },
+  "devDependencies": {
+    "typescript": "5.8.3",
+    "vite": "6.3.5",
+    "vitest": "3.2.4"
+  }
+}

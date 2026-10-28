@@ -1,0 +1,168 @@
+:root {
+  --bg: #f7f7f5;
+  --panel: #ffffff;
+  --fg: #1d1f21;
+  --muted: #5f6368;
+  --border: #dcdcd8;
+  --grid: rgba(0, 0, 0, 0.07);
+  --axis: #3c4043;
+  --accent: #1f5fbf;
+
+  --c-f: #1f5fbf;
+  --c-ref: #7a7a7a;
+  --c-phip: #1f5fbf;
+  --c-phim: #c2410c;
+  --c-psip: #0f8a5f;
+  --c-psim: #7c3aed;
+  --c-inc: #0f8a5f;
+  --c-dec: #c62828;
+  --c-unres: #b7791f;
+  --c-sel: rgba(31, 95, 191, 0.55);
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #15171a;
+    --panel: #1d2024;
+    --fg: #e6e6e3;
+    --muted: #9aa0a6;
+    --border: #33373c;
+    --grid: rgba(255, 255, 255, 0.08);
+    --axis: #c4c7c5;
+    --accent: #7fb0ff;
+
+    --c-f: #7fb0ff;
+    --c-ref: #9aa0a6;
+    --c-phip: #7fb0ff;
+    --c-phim: #fb923c;
+    --c-psip: #34d399;
+    --c-psim: #c4a5ff;
+    --c-inc: #34d399;
+    --c-dec: #f87171;
+    --c-unres: #fbbf24;
+    --c-sel: rgba(127, 176, 255, 0.6);
+    color-scheme: dark;
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font: 14px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+}
+
+.top {
+  padding: 14px 20px 10px;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel);
+}
+h1 { font-size: 18px; margin: 0 0 4px; font-weight: 600; }
+h2 { font-size: 14px; margin: 0; font-weight: 600; }
+.conv { margin: 0 0 10px; color: var(--muted); font-size: 12.5px; }
+
+.controls {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px 24px;
+}
+.ctl {
+  display: grid;
+  grid-template-columns: auto 1fr 7.5em auto;
+  align-items: center;
+  gap: 8px;
+}
+.ctl > label:first-child { white-space: nowrap; font-weight: 500; }
+.ctl-inline { grid-template-columns: auto 1fr 5em; margin-top: 8px; }
+.ctl input[type="range"] { width: 100%; accent-color: var(--accent); }
+.ctl input[type="number"] {
+  width: 100%;
+  font: 13px ui-monospace, SFMono-Regular, Menlo, monospace;
+  padding: 3px 5px;
+  background: var(--bg);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+.chk { font-size: 12px; color: var(--muted); white-space: nowrap; }
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 14px;
+  padding: 14px 20px;
+}
+.charts { display: grid; gap: 14px; min-width: 0; }
+.side { display: grid; gap: 14px; align-content: start; }
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px 12px;
+  min-width: 0;
+}
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+.seg { display: flex; gap: 12px; font-size: 12.5px; color: var(--muted); }
+.seg input { accent-color: var(--accent); margin: 0 3px 0 0; vertical-align: -1px; }
+.hint { font-size: 12px; color: var(--muted); margin: 4px 0 0; }
+
+.chart { width: 100%; height: 230px; }
+.chart-lg { height: 330px; }
+
+.warn {
+  margin: 6px 0 0;
+  font-size: 12.5px;
+  color: var(--c-unres);
+}
+
+table.kv { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 13px; }
+table.kv th {
+  text-align: left;
+  font-weight: 500;
+  color: var(--muted);
+  padding: 3px 8px 3px 0;
+  white-space: nowrap;
+  vertical-align: top;
+}
+table.kv td {
+  text-align: right;
+  padding: 3px 0;
+  font: 12.5px ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-variant-numeric: tabular-nums;
+  word-break: break-all;
+}
+table.kv td.txt { font-family: inherit; font-size: 12.5px; word-break: normal; }
+table.kv tr.sep th, table.kv tr.sep td { border-top: 1px solid var(--border); padding-top: 6px; }
+.st-inc { color: var(--c-inc); }
+.st-dec { color: var(--c-dec); }
+.st-unres { color: var(--c-unres); }
+
+.foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 6px 20px 16px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.timing { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; white-space: nowrap; }
+
+/* uPlot theming */
+.u-legend { font-size: 12px; color: var(--fg); }
+.u-legend .u-value { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.u-over { cursor: crosshair; }
+
+@media (max-width: 1100px) {
+  .controls { grid-template-columns: 1fr; }
+  .layout { grid-template-columns: minmax(0, 1fr); }
+}
