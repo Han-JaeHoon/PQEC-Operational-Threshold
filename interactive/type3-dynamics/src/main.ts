@@ -4,6 +4,7 @@ import "./style.css";
 import {
   allocTrajectory, computeTrajectory, summarize, Step, type Trajectory,
 } from "./type3map";
+import { qAbs, qRel } from "./thresholds";
 
 const MAX_N = 500;
 /** |dF| within this factor of its rounding bound is flagged "near precision limit". */
@@ -22,6 +23,10 @@ const state = {
   dAxis: "lin" as "lin" | "asinh",
 };
 const traj: Trajectory = allocTrajectory(MAX_N);
+/** Always MAX_N rounds, independent of the displayed N: feeds the monotonicity verdict. */
+const trajLong: Trajectory = allocTrajectory(MAX_N);
+/** First resolved decrease F_{n+1} < F_n over n = 0..MAX_N-1, or -1. */
+let firstDecLong = -1;
 
 // ---------------------------------------------------------------- DOM
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
@@ -38,6 +43,10 @@ const inspector = $<HTMLTableElement>("inspector");
 const summaryTbl = $<HTMLTableElement>("summary");
 const precWarn = $<HTMLParagraphElement>("precision-warn");
 const timing = $<HTMLSpanElement>("timing");
+const qMarkAbs = $<HTMLSpanElement>("qmark-abs");
+const qMarkRel = $<HTMLSpanElement>("qmark-rel");
+const qThLine = $<HTMLParagraphElement>("q-thresholds");
+const monoBadge = $<HTMLSpanElement>("mono");
 
 // ---------------------------------------------------------------- formatting
 const fmtF = (x: number) => x.toFixed(12);
@@ -142,6 +151,25 @@ function f0Line(u: uPlot) {
   ctx.restore();
 }
 
+/** Hollow ring on the first round whose successor is lower (F_{n+1} < F_n). */
+function decMarker(u: uPlot) {
+  const n = firstDecLong;
+  if (n < 0 || n > traj.N) return;
+  const x = u.valToPos(n, "x", true);
+  const y = u.valToPos(traj.pPhiP[n], "y", true);
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+  if (x < u.bbox.left - 1 || x > u.bbox.left + u.bbox.width + 1) return;
+  const ctx = u.ctx;
+  const dpr = devicePixelRatio;
+  ctx.save();
+  ctx.strokeStyle = css("--c-dec");
+  ctx.lineWidth = 1.5 * dpr;
+  ctx.beginPath();
+  ctx.arc(x, y, 6 * dpr, 0, 2 * Math.PI);
+  ctx.stroke();
+  ctx.restore();
+}
+
 /** Sparse decade splits for the signed-log (asinh) dF axis. */
 function asinhSplits(_u: uPlot, _ai: number, min: number, max: number): number[] {
   const top = Math.max(Math.abs(min), Math.abs(max), ASINH_LIN);
@@ -238,7 +266,7 @@ function buildCharts() {
         value: (_u, v) => (v == null ? "–" : fmtF(v)),
       },
     ],
-    hooks: { draw: [f0Line, selMarker], setSelect: [onSelect] },
+    hooks: { draw: [f0Line, decMarker, selMarker], setSelect: [onSelect] },
   }, [[], []], elF);
 
   const pop = (label: string, c: string, dash?: number[]): uPlot.Series => ({
@@ -397,6 +425,51 @@ function renderSummary() {
   }
 }
 
+/** Analytic q_abs / q_rel (calculation notes) as ticks on the q slider + one text line. */
+function renderThresholds() {
+  const a = qAbs(state.eps);
+  const r = qRel(state.eps);
+  const qmax = +qRange.max;
+  for (const [el, v] of [[qMarkAbs, a], [qMarkRel, r]] as const) {
+    const ok = Number.isFinite(v) && v <= qmax;
+    el.hidden = !ok;
+    if (ok) el.style.setProperty("--f", String(v / qmax));
+  }
+  if (!Number.isFinite(a)) {
+    qThLine.innerHTML =
+      `<b class="k-abs">q<sub>abs</sub></b>, <b class="k-rel">q<sub>rel</sub></b>: ` +
+      `defined only for entangled input, 0 &lt; ε &lt; 2/3`;
+    return;
+  }
+  const where = state.q < a ? "below both" : state.q < r ? "between q<sub>abs</sub> and q<sub>rel</sub>" : "above both";
+  qThLine.innerHTML =
+    `<b class="k-abs">q<sub>abs</sub>(ε)</b> = <span class="num">${a.toFixed(6)}</span> · ` +
+    `<b class="k-rel">q<sub>rel</sub>(ε)</b> = <span class="num">${r.toFixed(6)}</span> · ` +
+    `q is ${where}`;
+}
+
+/** Monotonicity verdict for F_n over a fixed horizon of MAX_N rounds. */
+function renderMonotone() {
+  computeTrajectory(trajLong, state.eps, state.q, MAX_N);
+  const s = summarize(trajLong);
+  firstDecLong = s.firstDecrease;
+  if (s.firstDecrease >= 0) {
+    const n = s.firstDecrease;
+    monoBadge.className = "mono dec";
+    monoBadge.textContent = `↓ decreases at n = ${n}` + (n >= traj.N ? " (beyond N)" : "");
+    monoBadge.title = `First resolved decrease: F_${n + 1} < F_${n} (both evaluation routes agree).`;
+  } else {
+    monoBadge.className = "mono ok";
+    monoBadge.textContent = `↑ no decrease, n ≤ ${MAX_N}`;
+    monoBadge.title =
+      `No resolved decrease F_{n+1} < F_n for n = 0…${MAX_N - 1}.` +
+      (s.unresolved > 0
+        ? ` ${s.unresolved} step(s) near the fixed point are below the float64 error bound; no sign is claimed for them.`
+        : "") +
+      ` Finite-round numerical check, not a proof.`;
+  }
+}
+
 // ---------------------------------------------------------------- update loop
 let pending = false;
 let dataDirty = false;
@@ -415,7 +488,9 @@ function frame() {
   if (dataDirty) {
     dataDirty = false;
     computeTrajectory(traj, state.eps, state.q, state.N);
+    renderMonotone();
     const t1 = performance.now();
+    renderThresholds();
     pushData();
     renderSummary();
     renderInspector();
@@ -443,6 +518,7 @@ function setQRange(full: boolean) {
   qFull.checked = full;
   qRange.max = full ? "1" : "0.2";
   qRange.value = String(state.q);
+  renderThresholds();
 }
 
 function setSelected(n: number) {
@@ -525,6 +601,8 @@ matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => buil
 
 // ---------------------------------------------------------------- init
 computeTrajectory(traj, state.eps, state.q, state.N);
+renderMonotone();
+renderThresholds();
 buildCharts();
 renderSummary();
 renderInspector();

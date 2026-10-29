@@ -23,9 +23,16 @@
       </div>
       <div class="ctl">
         <label for="q-num">CNOT noise q</label>
-        <input id="q-range" type="range" min="0" max="0.2" step="0.00001" value="0.0327" />
+        <div class="range-wrap">
+          <input id="q-range" type="range" min="0" max="0.2" step="0.00001" value="0.0327" />
+          <div class="qmarks" aria-hidden="true">
+            <span id="qmark-abs" class="qmark qmark-abs" title="q_abs(ε)"></span>
+            <span id="qmark-rel" class="qmark qmark-rel" title="q_rel(ε)"></span>
+          </div>
+        </div>
         <input id="q-num" type="number" min="0" max="1" step="0.0001" value="0.0327" />
         <label class="chk"><input id="q-full" type="checkbox" /> 0–1</label>
+        <p id="q-thresholds" class="qth-line"></p>
       </div>
       <div class="ctl">
         <label for="n-num">Rounds N</label>
@@ -39,7 +46,7 @@
     <section class="charts">
       <div class="panel">
         <div class="panel-head">
-          <h2>Bell fidelity F<sub>n</sub></h2>
+          <h2>Bell fidelity F<sub>n</sub> <span id="mono" class="mono"></span></h2>
           <div class="seg" role="radiogroup" aria-label="F axis">
             <label><input type="radio" name="faxis" value="auto" checked /> auto-zoom</label>
             <label><input type="radio" name="faxis" value="fixed" /> 0–1</label>

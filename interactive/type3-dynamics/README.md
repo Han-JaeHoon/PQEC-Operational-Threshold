@@ -74,6 +74,19 @@ Beyond that round its sign cannot be decided in double precision, and the tool s
 
 - **ε, q, N**: sliders with linked number inputs. The q slider spans 0–0.2 by default;
   tick **0–1** for the full range. Typing a value above 0.2 switches the range automatically.
+- **q_abs / q_rel ticks**: two short ticks under the q slider mark the analytic Type-3
+  thresholds for the current ε (amber `q_abs`, cyan `q_rel`), with their values and where q
+  sits relative to them on the line below. Both are the unique root in `(0, 1)` of the
+  boundary polynomials of the October 2026 calculation notes (`r = 1−q`, `t = 1−ε`):
+  `q_abs`: `3(1+t)r⁶ − (1+t)r⁵ − 3t²r⁴ − 1 = 0`;
+  `q_rel`: `(1+t)(2+t)r⁶ − t(1+t)r⁵ − 3t²r⁴ − 1 = 0`
+  ([`src/thresholds.ts`](src/thresholds.ts)). They are defined only for `0 < ε < 2/3`;
+  outside that range the ticks are hidden.
+- **Monotonicity badge** (next to the F_n title): `↑ no decrease, n ≤ 500` when no resolved
+  step `F_{n+1} < F_n` occurs in rounds 0…500, otherwise `↓ decreases at n = k` and a ring
+  on that point of the F_n chart. The check always runs over 500 rounds, independent of N,
+  using the same two-route sign rule as the ΔF chart (unresolved steps never count as a
+  decrease). It is a finite-round numerical check, not an analytic `q_th`.
 - **F axis**: auto-zoom (fits the data) or fixed 0–1.
 - **ΔF axis**: linear, or signed log (asinh), so that `10⁻⁴` and `10⁻¹⁰` steps are visible
   together.
@@ -85,7 +98,8 @@ Beyond that round its sign cannot be decided in double precision, and the tool s
 
 ## Verification
 
-`npm test` runs `tests/type3map.test.ts` and `tests/reference.test.ts`.
+`npm test` runs `tests/type3map.test.ts`, `tests/reference.test.ts` and
+`tests/thresholds.test.ts`.
 
 | test | what is checked |
 |--|--|
@@ -96,6 +110,9 @@ Beyond that round its sign cannot be decided in double precision, and the tool s
 | E | at `q = 0`: populations follow `p → p²/Σp²` (`ρ → ρ²/Tr ρ²`), and `F₁ = (1+3t)²/(4(1+3t²))` |
 | F | at `ε = 1`: `F_n = 1/4` exactly, for all q |
 | G | Bell populations agree with independent full-circuit references (below), and the ε = 0.1, q = 0.0327 rise-then-decrease appears in the references at the same round |
+| T1 | `q_abs`, `q_rel` reproduce Table 1 of the notes to 12 digits (ε = 0.02 … 0.65, and ε → 2/3) |
+| T2 | NaN outside `0 < ε < 2/3`; `0 < q_abs < q_rel`, both increasing in ε |
+| T3 | against the map itself: at `q_abs − 10⁻⁶` every non-target population (at `q_rel − 10⁻⁶` every ratio `p_i/p_Φ⁺`) decreases over 200 rounds; at `+10⁻⁶` the Φ⁻ quantity rises in round 1 |
 | extra | `F₁` vs the repository closed form `pqec_cnot_threshold.F_dec`; the iterates converge to the note-01 fixed point `(u*, v*)`; the two `ΔF` routes agree within their bounds |
 
 The references in `verification/reference_type3.json` come from
