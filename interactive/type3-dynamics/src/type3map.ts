@@ -27,6 +27,9 @@
 
 /** Unit roundoff of IEEE-754 binary64. */
 export const EPS64 = 2 ** -53;
+/** Smallest positive subnormal binary64, 2^-1074: the absolute error unit once products
+ *  underflow (the state is then I/4 to within ~1e-300 and the relative model alone fails). */
+export const ETA64 = 2 ** -1074;
 
 /** Classification of one fidelity step F_n -> F_{n+1}. */
 export const enum Step {
@@ -128,14 +131,16 @@ export function computeTrajectory(t: Trajectory, eps: number, q: number, N: numb
     const vn = b / D;
 
     // Route 2: drift numerator, N/(4D) = F_{n+1} - F_n, with a forward error bound
-    // (sum of magnitudes of the cancelling terms, times a small multiple of the roundoff).
+    // (sum of magnitudes of the cancelling terms, times a small multiple of the roundoff),
+    // plus an absolute term for products that underflow (at most 7 of them reach N, each off
+    // by <= 2^-1075 and amplified by < 8) and for the final quotient.
     const t1 = 2 * u * (a - D);
     const t2 = b;
     const t3 = v * D;
     const num = t1 + t2 - t3;
     const mag = Math.abs(2 * u) * (Math.abs(a) + D) + Math.abs(t2) + Math.abs(t3);
     t.dFmap[n] = num / (4 * D);
-    t.dFmapErr[n] = (16 * EPS64 * mag) / (4 * D);
+    t.dFmapErr[n] = (16 * EPS64 * mag + 64 * ETA64) / (4 * D) + ETA64;
 
     u = un;
     v = vn;

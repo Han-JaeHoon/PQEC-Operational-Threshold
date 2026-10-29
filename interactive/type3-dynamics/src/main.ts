@@ -5,6 +5,25 @@ import {
   allocTrajectory, computeTrajectory, summarize, Step, type Trajectory,
 } from "./type3map";
 import { qAbs, qRel } from "./thresholds";
+import { computeTrajectory4 } from "./type4map";
+import { qAbs4, qRel4 } from "./thresholds4";
+
+/** Selectable protocols: each brings its own exact map and its own analytic thresholds. */
+const PROTOCOLS = {
+  type3: {
+    compute: computeTrajectory, qAbs, qRel,
+    title: "Type-3 noisy PQEC — round-by-round dynamics",
+    gadget: "Textbook 16-CNOT gadget",
+    docTitle: "Type-3 PQEC Dynamics",
+  },
+  type4: {
+    compute: computeTrajectory4, qAbs: qAbs4, qRel: qRel4,
+    title: "Type-4 noisy PQEC — round-by-round dynamics",
+    gadget: "Resynthesized 14-CNOT gadget (pqec_resynth_noise.GATES)",
+    docTitle: "Type-4 PQEC Dynamics",
+  },
+} as const;
+type ProtocolId = keyof typeof PROTOCOLS;
 
 const MAX_N = 500;
 /** |dF| within this factor of its rounding bound is flagged "near precision limit". */
@@ -14,6 +33,7 @@ const ASINH_LIN = 1e-13;
 
 // ---------------------------------------------------------------- state
 const state = {
+  proto: "type3" as ProtocolId,
   eps: 0.1,
   q: 0.0327,
   N: 30,
@@ -47,6 +67,8 @@ const qMarkAbs = $<HTMLSpanElement>("qmark-abs");
 const qMarkRel = $<HTMLSpanElement>("qmark-rel");
 const qThLine = $<HTMLParagraphElement>("q-thresholds");
 const monoBadge = $<HTMLSpanElement>("mono");
+const titleEl = $<HTMLHeadingElement>("title");
+const gadgetEl = $<HTMLSpanElement>("gadget");
 
 // ---------------------------------------------------------------- formatting
 const fmtF = (x: number) => x.toFixed(12);
@@ -427,8 +449,9 @@ function renderSummary() {
 
 /** Analytic q_abs / q_rel (calculation notes) as ticks on the q slider + one text line. */
 function renderThresholds() {
-  const a = qAbs(state.eps);
-  const r = qRel(state.eps);
+  const p = PROTOCOLS[state.proto];
+  const a = p.qAbs(state.eps);
+  const r = p.qRel(state.eps);
   const qmax = +qRange.max;
   for (const [el, v] of [[qMarkAbs, a], [qMarkRel, r]] as const) {
     const ok = Number.isFinite(v) && v <= qmax;
@@ -450,7 +473,7 @@ function renderThresholds() {
 
 /** Monotonicity verdict for F_n over a fixed horizon of MAX_N rounds. */
 function renderMonotone() {
-  computeTrajectory(trajLong, state.eps, state.q, MAX_N);
+  PROTOCOLS[state.proto].compute(trajLong, state.eps, state.q, MAX_N);
   const s = summarize(trajLong);
   firstDecLong = s.firstDecrease;
   if (s.firstDecrease >= 0) {
@@ -487,7 +510,7 @@ function frame() {
   const t0 = performance.now();
   if (dataDirty) {
     dataDirty = false;
-    computeTrajectory(traj, state.eps, state.q, state.N);
+    PROTOCOLS[state.proto].compute(traj, state.eps, state.q, state.N);
     renderMonotone();
     const t1 = performance.now();
     renderThresholds();
@@ -568,6 +591,19 @@ qFull.addEventListener("change", () => {
   setQRange(qFull.checked);
 });
 
+/** Switch protocol: eps, q, N, the selected round and the zoom window are all kept. */
+function setProtocol(id: ProtocolId) {
+  state.proto = id;
+  const p = PROTOCOLS[id];
+  titleEl.textContent = p.title;
+  gadgetEl.textContent = p.gadget;
+  document.title = p.docTitle;
+  schedule(true);
+}
+for (const r of document.querySelectorAll<HTMLInputElement>('input[name="proto"]')) {
+  r.addEventListener("change", () => { if (r.checked) setProtocol(r.value as ProtocolId); });
+}
+
 nRange.addEventListener("input", () => setN(+nRange.value));
 nNum.addEventListener("input", () => {
   const x = parseInt(nNum.value, 10);
@@ -600,7 +636,10 @@ const ro = new ResizeObserver(() => {
 matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => buildCharts());
 
 // ---------------------------------------------------------------- init
-computeTrajectory(traj, state.eps, state.q, state.N);
+// a browser may restore the radio state on reload; follow it rather than the default
+const restored = document.querySelector<HTMLInputElement>('input[name="proto"]:checked');
+if (restored && restored.value !== state.proto) setProtocol(restored.value as ProtocolId);
+PROTOCOLS[state.proto].compute(traj, state.eps, state.q, state.N);
 renderMonotone();
 renderThresholds();
 buildCharts();

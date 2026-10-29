@@ -8,9 +8,15 @@
 <body>
   <header class="top">
     <div class="title">
-      <h1>Type-3 noisy PQEC — round-by-round dynamics</h1>
+      <div class="title-row">
+        <h1 id="title">Type-3 noisy PQEC — round-by-round dynamics</h1>
+        <div class="seg proto" role="radiogroup" aria-label="Protocol">
+          <label><input type="radio" name="proto" value="type3" checked /> Type 3 — 16 CNOT</label>
+          <label><input type="radio" name="proto" value="type4" /> Type 4 — 14 CNOT</label>
+        </div>
+      </div>
       <p class="conv">
-        Textbook 16-CNOT gadget · two-qubit replacement depolarizing <i>q</i> after every CNOT ·
+        <span id="gadget">Textbook 16-CNOT gadget</span> · two-qubit replacement depolarizing <i>q</i> after every CNOT ·
         input (1−ε)|Φ⁺⟩⟨Φ⁺| + ε I/4 · exact map on the invariant plane
         u = ⟨XX⟩ = −⟨YY⟩, v = ⟨ZZ⟩, u₀ = v₀ = 1−ε
       </p>
