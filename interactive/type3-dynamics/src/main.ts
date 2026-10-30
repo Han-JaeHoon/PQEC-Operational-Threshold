@@ -7,20 +7,40 @@ import {
 import { qAbs, qRel } from "./thresholds";
 import { computeTrajectory4 } from "./type4map";
 import { qAbs4, qRel4 } from "./thresholds4";
+import { computeTrajectory4Q } from "./q4map";
+import { qAbs4Q, qRel4Q } from "./thresholds4q";
 
-/** Selectable protocols: each brings its own exact map and its own analytic thresholds. */
+const PLANE_UV = "u = ⟨XX⟩ = −⟨YY⟩, v = ⟨ZZ⟩, u₀ = v₀ = 1−ε";
+
+/**
+ * Selectable protocols: each brings its own exact map, its own analytic thresholds with the
+ * eps range on which each is defined, and the names of its two plane coordinates.
+ */
 const PROTOCOLS = {
   type3: {
     compute: computeTrajectory, qAbs, qRel,
+    absDomain: "0 &lt; ε &lt; 2/3", relDomain: "0 &lt; ε &lt; 2/3",
     title: "Type-3 noisy PQEC — round-by-round dynamics",
     gadget: "Textbook 16-CNOT gadget",
+    plane: PLANE_UV, coords: ["u", "v"],
     docTitle: "Type-3 PQEC Dynamics",
   },
   type4: {
     compute: computeTrajectory4, qAbs: qAbs4, qRel: qRel4,
+    absDomain: "0 &lt; ε &lt; 2/3", relDomain: "0 &lt; ε &lt; 2/3",
     title: "Type-4 noisy PQEC — round-by-round dynamics",
     gadget: "Resynthesized 14-CNOT gadget (pqec_resynth_noise.GATES)",
+    plane: PLANE_UV, coords: ["u", "v"],
     docTitle: "Type-4 PQEC Dynamics",
+  },
+  q4: {
+    compute: computeTrajectory4Q, qAbs: qAbs4Q, qRel: qRel4Q,
+    absDomain: "0 &lt; ε &lt; 2/3", relDomain: "0 &lt; ε &lt; 1",
+    title: "4Q noisy Bell-state distillation — round-by-round dynamics",
+    gadget: "Four-qubit 5-CNOT gadget, postselected (m₃, m₄) = (0, 0)",
+    plane: "a = ⟨XX⟩, b = ⟨ZZ⟩ = −⟨YY⟩ (so p_Φ⁻ = p_Ψ⁻), a₀ = b₀ = 1−ε",
+    coords: ["a", "b"],
+    docTitle: "4Q Distillation Dynamics",
   },
 } as const;
 type ProtocolId = keyof typeof PROTOCOLS;
@@ -69,6 +89,7 @@ const qThLine = $<HTMLParagraphElement>("q-thresholds");
 const monoBadge = $<HTMLSpanElement>("mono");
 const titleEl = $<HTMLHeadingElement>("title");
 const gadgetEl = $<HTMLSpanElement>("gadget");
+const planeEl = $<HTMLSpanElement>("plane");
 
 // ---------------------------------------------------------------- formatting
 const fmtF = (x: number) => x.toFixed(12);
@@ -395,9 +416,10 @@ function renderInspector() {
   const n = state.sel;
   const [lab, cls] = stepLabel(n);
   const near = isNearLimit(n);
+  const [cu, cv] = PROTOCOLS[state.proto].coords;
   inspector.innerHTML =
-    row("u<sub>n</sub> = ⟨XX⟩", fmtF(traj.u[n])) +
-    row("v<sub>n</sub> = ⟨ZZ⟩", fmtF(traj.v[n])) +
+    row(`${cu}<sub>n</sub> = ⟨XX⟩`, fmtF(traj.u[n])) +
+    row(`${cv}<sub>n</sub> = ⟨ZZ⟩`, fmtF(traj.v[n])) +
     row("p<sub>Φ⁺</sub> = F<sub>n</sub>", fmtF(traj.pPhiP[n]), "sep") +
     row("p<sub>Φ⁻</sub>", fmtF(traj.pPhiM[n])) +
     row("p<sub>Ψ⁺</sub>", fmtF(traj.pPsiP[n])) +
@@ -458,10 +480,21 @@ function renderThresholds() {
     el.hidden = !ok;
     if (ok) el.style.setProperty("--f", String(v / qmax));
   }
-  if (!Number.isFinite(a)) {
+  const absOk = Number.isFinite(a), relOk = Number.isFinite(r);
+  if (!absOk && !relOk) {
+    qThLine.innerHTML = p.absDomain === p.relDomain
+      ? `<b class="k-abs">q<sub>abs</sub></b>, <b class="k-rel">q<sub>rel</sub></b>: ` +
+        `defined only for entangled input, ${p.absDomain}`
+      : `<b class="k-abs">q<sub>abs</sub></b> defined only for ${p.absDomain}, ` +
+        `<b class="k-rel">q<sub>rel</sub></b> only for ${p.relDomain}`;
+    return;
+  }
+  if (!absOk) {
+    // 4Q, 2/3 <= eps < 1: only q_rel has an analytic value there
     qThLine.innerHTML =
-      `<b class="k-abs">q<sub>abs</sub></b>, <b class="k-rel">q<sub>rel</sub></b>: ` +
-      `defined only for entangled input, 0 &lt; ε &lt; 2/3`;
+      `<b class="k-abs">q<sub>abs</sub></b>: defined only for ${p.absDomain} · ` +
+      `<b class="k-rel">q<sub>rel</sub>(ε)</b> = <span class="num">${r.toFixed(6)}</span> · ` +
+      `q is ${state.q < r ? "below" : "above"} q<sub>rel</sub>`;
     return;
   }
   const where = state.q < a ? "below both" : state.q < r ? "between q<sub>abs</sub> and q<sub>rel</sub>" : "above both";
@@ -597,6 +630,7 @@ function setProtocol(id: ProtocolId) {
   const p = PROTOCOLS[id];
   titleEl.textContent = p.title;
   gadgetEl.textContent = p.gadget;
+  planeEl.textContent = p.plane;
   document.title = p.docTitle;
   schedule(true);
 }

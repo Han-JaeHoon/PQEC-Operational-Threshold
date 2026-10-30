@@ -1,7 +1,8 @@
-# Type-3 / Type-4 interactive dynamics
+# Type-3 / Type-4 / 4Q interactive dynamics
 
 A local, browser-only simulator for the round-by-round dynamics of the **Type-3
-(textbook 16-CNOT)** and **Type-4 (resynthesized 14-CNOT)** noisy PQEC gadgets. Pick the
+(textbook 16-CNOT)** and **Type-4 (resynthesized 14-CNOT)** noisy PQEC gadgets and of the
+**4Q (four-qubit, 5-CNOT, postselected)** noisy Bell-state distillation protocol. Pick the
 protocol at the top, move the input noise `ε` and the per-CNOT noise `q`, and the Bell
 fidelity, the four Bell populations and the fidelity change `ΔF_n` update immediately.
 Everything is computed in the page; there is no server or Python process. (The folder keeps
@@ -75,6 +76,29 @@ to 2.6e-15. It is implemented separately in [`src/type4map.ts`](src/type4map.ts)
 (`computeTrajectory4`). Switching protocol keeps ε, q, N, the selected round and the zoom
 window.
 
+### 4Q
+
+Four qubits, two copies of the input: the 5 CNOTs of Bell-state-distillation
+`pqec_distill.circuit.CNOT_SEQUENCE`, each followed by the same replacement channel `D_q`,
+then an ideal H on q3; (m₃, m₄) = (0, 0) is postselected and the first pair kept. Its exact
+Bell-diagonal map (`analytic_exact_map.analytic_map_4q`; the 4Q calculation notes, October
+2026) is not of the Type-3/4 form, and the Bell-isotropic input keeps `y = −z` instead of
+`y = −x`. On that plane `ρ = ¼[II + a XX − b YY + b ZZ]`:
+
+```
+D_n     = 1 + r⁵ a_n² + (r⁵ + r³) b_n²          P_succ = D_n / 4
+a_{n+1} = r³ [(1 + r) a_n + 2 r² b_n²] / D_n
+b_{n+1} = r⁴ b_n [(1 + r) + 2 r a_n] / D_n       a_0 = b_0 = 1 − ε
+
+p_Φ⁺ = (1 + a + 2b)/4 = F_n,   p_Ψ⁺ = (1 + a − 2b)/4,   p_Φ⁻ = p_Ψ⁻ = (1 − a)/4
+```
+
+So in 4Q mode the coinciding pair is **Φ⁻ = Ψ⁻** (the dashed Ψ⁻ line lies on Φ⁻), not
+Ψ⁺ = Ψ⁻. The inspector names the coordinates `a_n = ⟨XX⟩`, `b_n = ⟨ZZ⟩`. The map matches
+the frozen circuit-only reference (`circuit_reference.csv`, 957 4Q rows). It is implemented
+in [`src/q4map.ts`](src/q4map.ts) (`computeTrajectory4Q`). Unlike Type 3/4, the normalisation
+`P_succ ≥ 1/4` never vanishes, so `q = 1` is regular (one round gives I/4).
+
 ## Reading `ΔF_n` near the fixed point
 
 `ΔF_n = F_{n+1} − F_n` is evaluated in two ways:
@@ -82,7 +106,8 @@ window.
 1. **Direct difference** of the two fidelities.
 2. **Drift numerator** from the map itself: `ΔF_n = N_n / (4 D_n)` with
    `N_n = 2u(2r⁶(1+v) − D) + r⁵(1+r)(u² + v) − vD` (Type 4: `r⁶, r⁵ → r⁴, r³` and
-   `D` with `r²`).
+   `D` with `r²`; 4Q: `N_n = A + 2B − (a + 2b)D` with `A = r³(1+r)a + 2r⁵b²`,
+   `B = r⁴b(1 + r + 2ra)`).
 
 Each route carries a floating-point error bound. A step is labelled **increase** or
 **decrease** only when both routes exceed their bounds and agree in sign. Otherwise the step
@@ -93,15 +118,18 @@ as near the precision limit.
 As the trajectory converges to its fixed point, `ΔF_n` eventually falls below about `10⁻¹⁵`.
 Beyond that round its sign cannot be decided in double precision, and the tool says so.
 
-Both bounds are checked against exact rational arithmetic (`tests/type4map.test.ts`, for
-both protocols). For very strong noise (q ≳ 0.5 over hundreds of rounds) the state reaches
+Both bounds are checked against exact rational arithmetic (`tests/type4map.test.ts` for
+Type 3 and Type 4, `tests/q4map.test.ts` for 4Q). The 4Q bounds come from an explicit
+operation count (header of `src/q4map.ts`) and use `32·u` for both routes, with the
+absolute route-2 term `128·2⁻¹⁰⁷⁴/(4D) + 2⁻¹⁰⁷⁴`. For very strong noise (q ≳ 0.5 over hundreds of rounds) the state reaches
 I/4 so closely that u, v underflow below 1e-308; there the relative-error model alone does
 not bound route 2, so its bound also carries an absolute term of `65 · 2⁻¹⁰⁷⁴`. This changes
 no value, no sign and no chart, only that displayed bound in the underflow regime.
 
 ## Controls
 
-- **Protocol**: Type 3 — 16 CNOT (default) or Type 4 — 14 CNOT, next to the title.
+- **Protocol**: Type 3 — 16 CNOT (default), Type 4 — 14 CNOT or 4Q — 5 CNOT, next to the
+  title.
 - **ε, q, N**: sliders with linked number inputs. The q slider spans 0–0.2 by default;
   tick **0–1** for the full range. Typing a value above 0.2 switches the range automatically.
 - **q_abs / q_rel ticks**: two short ticks under the q slider mark the analytic thresholds
@@ -115,8 +143,15 @@ no value, no sign and no chart, only that displayed bound in the underflow regim
     `q_abs`: `3(1+t)r⁴ − (1+t)r³ − 3t²r² − 1 = 0`;
     `q_rel`: `(1+t)(2+t)r⁴ − t(1+t)r³ − 3t²r² − 1 = 0`
     ([`src/thresholds4.ts`](src/thresholds4.ts)).
+  - 4Q (limiting component Ψ⁺ for both):
+    `q_abs`: `2(1+t−t²)r⁵ + r⁴ − (1+t²)r³ − 1 = 0`;
+    `q_rel`: `1 − r⁴ + t(t+1)r³ + (2t²−3t−1)r⁵ = 0`
+    ([`src/thresholds4q.ts`](src/thresholds4q.ts)).
 
-  They are defined only for `0 < ε < 2/3`; outside that range the ticks are hidden.
+  For Type 3 and Type 4 both are defined only for `0 < ε < 2/3`. For 4Q, `q_abs` is defined
+  for `0 < ε < 2/3` and `q_rel` for the whole interior `0 < ε < 1` (the q_rel note proves it
+  there), so for `2/3 ≤ ε < 1` only the `q_rel` tick and value are shown. Outside a
+  threshold's range its tick is hidden.
 - **Monotonicity badge** (next to the F_n title): `↑ no decrease, n ≤ 500` when no resolved
   step `F_{n+1} < F_n` occurs in rounds 0…500, otherwise `↓ decreases at n = k` and a ring
   on that point of the F_n chart. The check always runs over 500 rounds, independent of N,
@@ -135,7 +170,8 @@ no value, no sign and no chart, only that displayed bound in the underflow regim
 
 `npm test` runs `tests/type3map.test.ts`, `tests/reference.test.ts`,
 `tests/thresholds.test.ts` (Type 3) and `tests/type4map.test.ts`, `tests/reference4.test.ts`,
-`tests/thresholds4.test.ts` (Type 4).
+`tests/thresholds4.test.ts` (Type 4) and `tests/q4map.test.ts`, `tests/reference4q.test.ts`,
+`tests/thresholds4q.test.ts` (4Q).
 
 | test | what is checked |
 |--|--|
@@ -157,6 +193,13 @@ no value, no sign and no chart, only that displayed bound in the underflow regim
 | T1-4 | Type-4 `q_abs`, `q_rel` reproduce the notes' tables to 12 digits (and ε → 2/3, ε = 0.15) |
 | T2-4 | NaN outside `0 < ε < 2/3`; `0 < q_abs < q_rel`, both increasing; `r* > 5/6` and `> 4/5` as the proofs require; differ from Type 3 |
 | T3-4 | as T3, on the Type-4 map; Φ⁻ is the limiting component |
+| **4Q** | |
+| A–F | same input state as Type 3; Σp = 1, p ≥ 0, `p_Φ⁻ = p_Ψ⁻` exactly and `a, b ≥ 0`, N = 500; the general `(x, y, z)` map keeps `y = −z` and reduces to the `(a, b)` step; `q = 0` gives `ρ²/Tr ρ²`; `ε = 1` stays at 1/4; `q = 1` gives I/4 in one round; first-round `a₁, b₁` of the q_abs note |
+| sign | both `ΔF` bounds hold against exact BigInt rational arithmetic (including underflow, q up to 1); every resolved sign equals the exact sign |
+| G4Q | Bell populations agree with independent full-circuit references of the 5-CNOT circuit (below) to 1e-12; the references are unit-trace, Bell-diagonal, positive, with `p_Φ⁻ = p_Ψ⁻`; the circuit's `P_succ` equals `D_n/4` every round, including q = 1 |
+| T1-4Q | `q_abs` (Table 1 of the q_abs note) and `q_rel` (Sec. 17 of the q_rel note, including ε = 0.75, 0.9) to 12 digits; ε → 2/3 and ε → 1 limits; the q_rel maximum 0.158732684144 at ε = 0.767499473760; the small-ε series; the q-form quintic (rel Eq. 108) |
+| T2-4Q | `q_abs` NaN outside `0 < ε < 2/3`, `q_rel` defined on `0 < ε < 1`; `0 < q_abs < q_rel`; `q_abs` increasing with `r* > 6/7`; `q_rel` not monotone on `(0, 1)`; above Type 3 everywhere, above Type 4 only for ε < 0.451 (abs) / 0.483 (rel) |
+| T3-4Q | as T3, on the 4Q map, `q_rel` also for ε up to 0.99; Ψ⁺ is the limiting component |
 
 The references in `verification/reference_type3.json` come from
 [`verification/generate_reference.py`](verification/generate_reference.py). It does **not**
@@ -187,8 +230,21 @@ input, and q just below Type-4 `q_abs(0.15)` and just above `q_rel(0.15)`.
 python interactive/type3-dynamics/verification/generate_reference_type4.py
 ```
 
+The 4Q references in `verification/reference_4q.json` come from
+[`verification/generate_reference_4q.py`](verification/generate_reference_4q.py), from a
+checkout of Bell-state-distillation (default: next to this repository, `--bsd` to override).
+R1 is that package's dense 16×16 simulator (`noisy_full_channel_dm` + `postselect_branch`);
+R2 is PennyLane `default.mixed` written in the script from the gate list only, with the next
+state rebuilt from all 16 expectations `⟨P ⊗ |00⟩⟨00|⟩`. Both record `P_succ`. The 18 cases
+include q just below `q_abs(0.15)`, just above `q_rel(0.15)`, between the two at ε = 0.1,
+separable inputs ε = 0.75 and 0.9 around `q_rel`, and q = 1.
+
+```bash
+python interactive/type3-dynamics/verification/generate_reference_4q.py
+```
+
 Note on `q → 1`: in the circuit, the normalisation `⟨Z_a⟩ = D_n r¹⁰/4` vanishes as `q → 1`.
 It underflows double precision for `q ≳ 0.97` and is exactly 0 at `q = 1`, where the
 parity-weighted estimator is 0/0. The simulator shows the closed-form limit there (the
 state goes to I/4), for both protocols. The full-circuit references therefore stop at
-`q = 0.6`.
+`q = 0.6`. This does not apply to 4Q, whose `P_succ = D_n/4 ≥ 1/4`.
