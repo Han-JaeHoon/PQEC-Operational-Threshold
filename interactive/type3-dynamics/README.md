@@ -1,8 +1,9 @@
-# Type-3 / Type-4 / 4Q interactive dynamics
+# Type-3 / Type-4 / 4Q / BBPSSW interactive dynamics
 
 A local, browser-only simulator for the round-by-round dynamics of the **Type-3
 (textbook 16-CNOT)** and **Type-4 (resynthesized 14-CNOT)** noisy PQEC gadgets and of the
-**4Q (four-qubit, 5-CNOT, postselected)** noisy Bell-state distillation protocol. Pick the
+**4Q (four-qubit, 5-CNOT, postselected)** noisy Bell-state distillation protocol, and of **Bennett's
+BBPSSW** recurrence purification. Pick the
 protocol at the top, move the input noise `ε` and the per-CNOT noise `q`, and the Bell
 fidelity, the four Bell populations and the fidelity change `ΔF_n` update immediately.
 Everything is computed in the page; there is no server or Python process. (The folder keeps
@@ -33,6 +34,28 @@ Other commands:
 | `npm test` | runs the numerical tests (Tests A–G, see below) |
 | `npm run build` | type-checks and builds a static bundle into `dist/` |
 | `npm run preview` | serves the built bundle (`http://localhost:4173/`) |
+
+## BBPSSW
+
+The fourth protocol is Bennett et al. (1996) Protocol A, with `Φ⁺` as the target: on two identical
+pairs `[A1, B1, A2, B2]`, input twirl, `CNOT(A1→A2)`, `D_q` on `(A1, A2)`, `CNOT(B1→B2)`, `D_q` on
+`(B1, B2)`, measure `(A2, B2)` in Z, keep `(A1, B1)` on `00` or `11`, output twirl. Everything except the
+two `D_q` is ideal. Because of the twirls the state is `(F, h, h, h)` with `h = (1 − F)/3`, so one
+scalar recurrence is exact ([`src/bbpsswmap.ts`](src/bbpsswmap.ts)), with `s = (1 − q)²`:
+
+```
+F_{n+1} = [s(F² + h²) + (1 − s)/8] / P_succ,   P_succ = s[(F + h)² + 4h²] + (1 − s)/2,   F_0 = 1 − 3ε/4
+```
+
+`P_succ^(n)` is shown per round in the inspector and is not accumulated. No threshold is shown for this
+protocol. `F_n` belongs to the physical output after every earlier round succeeded, while Type 3/4 show
+a reconstructed effective state, so equal `(ε, q)` does not mean equal resources or equal total noise.
+
+`verification/bbpssw_stage1/` is the Stage 1 derivation and frozen circuit, copied unchanged. It is a
+standalone reference, not one of this repository's earlier frozen baselines. Its `verify.py` rewrites
+its own result files, so run it on a copy. `verification/generate_reference_bbpssw.py` turns it and
+a second circuit route into `verification/reference_bbpssw.json`, which `tests/referencebbpssw.test.ts`
+checks. `q_gain^(1)` appears there as a check on the sign of the first step, never in the page.
 
 ## Regimes: q_bi and q_SN
 

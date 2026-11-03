@@ -14,12 +14,18 @@
           <label><input type="radio" name="proto" value="type3" checked /> Type 3 — 16 CNOT</label>
           <label><input type="radio" name="proto" value="type4" /> Type 4 — 14 CNOT</label>
           <label><input type="radio" name="proto" value="q4" /> 4Q — 5 CNOT</label>
+          <label><input type="radio" name="proto" value="bbpssw" /> Bennett — BBPSSW (2 local CNOT, twirling + postselection)</label>
         </div>
       </div>
       <p class="conv">
         <span id="gadget">Textbook 16-CNOT gadget</span> · two-qubit replacement depolarizing <i>q</i> after every CNOT ·
         input (1−ε)|Φ⁺⟩⟨Φ⁺| + ε I/4 · exact map on the invariant plane
         <span id="plane">u = ⟨XX⟩ = −⟨YY⟩, v = ⟨ZZ⟩, u₀ = v₀ = 1−ε</span>
+      </p>
+      <p id="proto-note" class="conv" hidden>
+        BBPSSW의 F<sub>n</sub>은 앞선 라운드가 모두 성공한 물리적 출력 상태의 값이고, P<sub>succ</sub>는 라운드별 값입니다.
+        Type 3/4는 virtual purification으로 재구성한 유효 상태이므로 F<sub>n</sub>을 비교할 수는 있어도 자원 소모나 성공확률이 같다고 볼 수 없습니다.
+        q는 CNOT당 세기이고 라운드당 CNOT 수가 달라(Type 3: 16, Type 4: 14, 4Q: 5, BBPSSW: 2) 누적 잡음도 다릅니다.
       </p>
     </div>
     <div class="controls">
@@ -73,7 +79,7 @@
       <div class="panel">
         <div class="panel-head">
           <h2>Bell populations p<sub>β</sub><sup>(n)</sup></h2>
-          <span class="hint">click legend to show/hide</span>
+          <span id="pop-hint" class="hint">click legend to show/hide</span>
         </div>
         <div id="chart-p" class="chart"></div>
       </div>
@@ -109,7 +115,7 @@
   </main>
 
   <footer class="foot">
-    <span>Finite-round numerical evaluation of the exact Type-3 map in IEEE-754 double precision —
+    <span>Finite-round numerical evaluation of the exact <span id="foot-map">Type-3 map</span> in IEEE-754 double precision —
       not an analytic proof or an infinite-round certificate.</span>
     <span id="timing" class="timing"></span>
   </footer>

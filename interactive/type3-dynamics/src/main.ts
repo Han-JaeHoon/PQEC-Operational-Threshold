@@ -9,6 +9,7 @@ import { computeTrajectory4 } from "./type4map";
 import { qAbs4, qRel4 } from "./thresholds4";
 import { computeTrajectory4Q } from "./q4map";
 import { qAbs4Q, qRel4Q } from "./thresholds4q";
+import { bbpsswPSucc, computeTrajectoryBBPSSW } from "./bbpsswmap";
 import { LIMIT_MAX_ROUNDS, orbitLimit, regime, THRESHOLDS, zPoint } from "./regimes";
 
 const PLANE_UV = "u = ⟨XX⟩ = −⟨YY⟩, v = ⟨ZZ⟩, u₀ = v₀ = 1−ε";
@@ -42,6 +43,15 @@ const PROTOCOLS = {
     plane: "a = ⟨XX⟩, b = ⟨ZZ⟩ = −⟨YY⟩ (so p_Φ⁻ = p_Ψ⁻), a₀ = b₀ = 1−ε",
     coords: ["a", "b"],
     docTitle: "4Q Distillation Dynamics",
+  },
+  bbpssw: {
+    compute: computeTrajectoryBBPSSW, qAbs: () => NaN, qRel: () => NaN,
+    absDomain: "", relDomain: "",
+    title: "Bennett BBPSSW noisy recurrence — round-by-round dynamics",
+    gadget: "Postselection + Twirling: 2 local CNOTs per round, keep (A₁, B₁) on target outcome 00 or 11, ideal twirl",
+    plane: "ρₙ = Fₙ Φ⁺ + (1−Fₙ)/3 (Φ⁻ + Ψ⁺ + Ψ⁻), F₀ = 1 − 3ε/4",
+    coords: ["u", "v"],
+    docTitle: "BBPSSW Dynamics",
   },
 } as const;
 type ProtocolId = keyof typeof PROTOCOLS;
@@ -94,6 +104,11 @@ const monoBadge = $<HTMLSpanElement>("mono");
 const titleEl = $<HTMLHeadingElement>("title");
 const gadgetEl = $<HTMLSpanElement>("gadget");
 const planeEl = $<HTMLSpanElement>("plane");
+const protoNote = $<HTMLParagraphElement>("proto-note");
+const popHint = $<HTMLSpanElement>("pop-hint");
+const footMap = $<HTMLSpanElement>("foot-map");
+const POP_HINT = popHint.textContent ?? "";
+const FOOT_MAP = footMap.textContent ?? "";
 
 // ---------------------------------------------------------------- formatting
 const fmtF = (x: number) => x.toFixed(12);
@@ -422,8 +437,10 @@ function renderInspector() {
   const near = isNearLimit(n);
   const [cu, cv] = PROTOCOLS[state.proto].coords;
   inspector.innerHTML =
-    row(`${cu}<sub>n</sub> = ⟨XX⟩`, fmtF(traj.u[n])) +
-    row(`${cv}<sub>n</sub> = ⟨ZZ⟩`, fmtF(traj.v[n])) +
+    (state.proto === "bbpssw"
+      ? row("round n", String(n))
+      : row(`${cu}<sub>n</sub> = ⟨XX⟩`, fmtF(traj.u[n])) +
+        row(`${cv}<sub>n</sub> = ⟨ZZ⟩`, fmtF(traj.v[n]))) +
     row("p<sub>Φ⁺</sub> = F<sub>n</sub>", fmtF(traj.pPhiP[n]), "sep") +
     row("p<sub>Φ⁻</sub>", fmtF(traj.pPhiM[n])) +
     row("p<sub>Ψ⁺</sub>", fmtF(traj.pPsiP[n])) +
@@ -433,7 +450,10 @@ function renderInspector() {
     row("error bounds", `${traj.dFerr[n].toExponential(1)} / ${traj.dFmapErr[n].toExponential(1)}`) +
     row("step n→n+1",
       `<span class="${cls}">${lab}</span>` +
-      (near ? ` <span class="st-unres">· near precision limit</span>` : ""), "", true);
+      (near ? ` <span class="st-unres">· near precision limit</span>` : ""), "", true) +
+    (state.proto === "bbpssw"
+      ? row("P<sub>succ</sub><sup>(n)</sup> (round n→n+1)", fmtF(bbpsswPSucc(traj.pPhiP[n], state.q)), "sep")
+      : "");
 }
 
 function renderSummary() {
@@ -451,6 +471,7 @@ function renderSummary() {
     row(`F<sub>N</sub> (N = ${N})`, fmtF(s.FN)) +
     row(`max F (n = ${s.maxFRound})`, fmtF(s.maxF)) +
     row(`min F (n = ${s.minFRound})`, fmtF(s.minF)) +
+    (state.proto === "bbpssw" ? row(`gain F<sub>${N}</sub> − F<sub>0</sub>`, fmtE(s.FN - s.F0)) : "") +
     row("first resolved decrease", dec, "sep", true) +
     row("unresolved sign", unres, "", true) +
     row(`p<sub>Φ⁺</sub><sup>(N)</sup>`, fmtF(a), "sep") +
@@ -475,6 +496,11 @@ function renderSummary() {
 
 /** Analytic q_abs / q_rel (calculation notes) as ticks on the q slider + one text line. */
 function renderThresholds() {
+  if (state.proto === "bbpssw") {
+    qMarkAbs.hidden = qMarkRel.hidden = true;
+    qThLine.textContent = "BBPSSW: threshold 미표시";
+    return;
+  }
   const p = PROTOCOLS[state.proto];
   const a = p.qAbs(state.eps);
   const r = p.qRel(state.eps);
@@ -515,6 +541,10 @@ function renderThresholds() {
  */
 function renderRegime() {
   const id = state.proto;
+  const noConstants = id === "bbpssw";
+  qWrap.classList.toggle("no-constants", noConstants);
+  qConstLine.hidden = qRegimeLine.hidden = noConstants;
+  if (noConstants) return;
   const p = PROTOCOLS[id];
   const { qBi, qSN } = THRESHOLDS[id];
   const qmax = +qRange.max;
@@ -704,6 +734,10 @@ function setProtocol(id: ProtocolId) {
   gadgetEl.textContent = p.gadget;
   planeEl.textContent = p.plane;
   document.title = p.docTitle;
+  const isB = id === "bbpssw";
+  protoNote.hidden = !isB;
+  popHint.textContent = isB ? "Φ⁻, Ψ⁺, Ψ⁻ overlap by design: twirling makes them equal · click legend to show/hide" : POP_HINT;
+  footMap.textContent = isB ? "BBPSSW recurrence" : FOOT_MAP;
   schedule(true);
 }
 for (const r of document.querySelectorAll<HTMLInputElement>('input[name="proto"]')) {

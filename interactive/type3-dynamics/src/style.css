@@ -149,6 +149,7 @@ h2 { font-size: 14px; margin: 0; font-weight: 600; }
 /* outward from the line, so the two never collide however close they are */
 .qmark-bi i { right: 0; color: var(--c-qbi); }
 .qmark-sn i { left: 0; color: var(--c-qsn); }
+.no-constants .qbands, .no-constants .qmark-const { display: none; }
 .swatch {
   display: inline-block;
   width: 10px;
