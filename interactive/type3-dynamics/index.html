@@ -30,16 +30,25 @@
       </div>
       <div class="ctl">
         <label for="q-num">CNOT noise q</label>
-        <div class="range-wrap">
+        <div id="q-wrap" class="range-wrap">
+          <div class="qbands" aria-hidden="true">
+            <span class="qband qband-pur"></span>
+            <span class="qband qband-bist"></span>
+            <span class="qband qband-unp"></span>
+          </div>
           <input id="q-range" type="range" min="0" max="0.2" step="0.00001" value="0.0327" />
           <div class="qmarks" aria-hidden="true">
             <span id="qmark-abs" class="qmark qmark-abs" title="q_abs(ε)"></span>
             <span id="qmark-rel" class="qmark qmark-rel" title="q_rel(ε)"></span>
+            <span class="qmark qmark-const qmark-bi"><i>q<sub>bi</sub></i></span>
+            <span class="qmark qmark-const qmark-sn"><i>q<sub>SN</sub></i></span>
           </div>
         </div>
         <input id="q-num" type="number" min="0" max="1" step="0.0001" value="0.0327" />
         <label class="chk"><input id="q-full" type="checkbox" /> 0–1</label>
         <p id="q-thresholds" class="qth-line"></p>
+        <p id="q-const" class="qth-line"></p>
+        <p id="q-regime" class="qth-line regime"></p>
       </div>
       <div class="ctl">
         <label for="n-num">Rounds N</label>

@@ -34,6 +34,31 @@ Other commands:
 | `npm run build` | type-checks and builds a static bundle into `dist/` |
 | `npm run preview` | serves the built bundle (`http://localhost:4173/`) |
 
+## Regimes: q_bi and q_SN
+
+Each protocol has two proved constants, independent of `ε`, with `q_m` used only to identify the
+low attractor. They live in [`src/regimes.ts`](src/regimes.ts) with their polynomials in
+`s = 1 − q`; `tests/regimes.test.ts` checks each against bisection to `1e-9`.
+
+| | `q_bi` | `q_SN` | `q_m` |
+|--|--|--|--|
+| Type 3 | 0.1182907629 | 0.1305792680 | 0.1187285384 |
+| Type 4 | 0.1789326522 | 0.1894166559 | 0.1808274866 |
+| 4Q | 0.1758332653 | 0.1806697260 | 0.1808274866 |
+
+- `q < q_bi`: every `ε ∈ (0,1)` converges to the same purified fixed point `P_B`.
+- `q_bi ≤ q ≤ q_SN`: bistable. Small `ε` goes to `P_B`, `ε` near 1 goes to `Z(q)`. Just below
+  `q_SN`, `P_B` itself has `F < 1/2`.
+- `q > q_SN`: every `ε ∈ (0,1)` converges to the same separable point `Z(q)`. `Z(q)` is the
+  boundary point `B*` for `q < q_m`, which only 4Q reaches beyond `q_SN`, and the mixed point
+  (`F = 1/4`) otherwise.
+
+The q slider draws both constants as lines over three tinted bands, and the line below it names
+the regime of the current `q` with the limit of the current orbit. That limit comes from a separate
+orbit of up to 200,000 rounds, not from the charts, which stop at 500. It carries the transverse
+component as a logarithm, so underflow cannot trap it on the invariant line, and a tiny component
+that is still growing is never read as convergence. Running out of rounds shows "미수렴".
+
 ## The model
 
 The input is `(1−ε)|Φ⁺⟩⟨Φ⁺| + ε I/4 = ¼[II + (1−ε)(XX − YY + ZZ)]`. After every CNOT of

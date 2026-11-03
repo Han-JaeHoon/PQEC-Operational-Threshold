@@ -9,6 +9,7 @@ import { computeTrajectory4 } from "./type4map";
 import { qAbs4, qRel4 } from "./thresholds4";
 import { computeTrajectory4Q } from "./q4map";
 import { qAbs4Q, qRel4Q } from "./thresholds4q";
+import { LIMIT_MAX_ROUNDS, orbitLimit, regime, THRESHOLDS, zPoint } from "./regimes";
 
 const PLANE_UV = "u = ⟨XX⟩ = −⟨YY⟩, v = ⟨ZZ⟩, u₀ = v₀ = 1−ε";
 
@@ -86,6 +87,9 @@ const timing = $<HTMLSpanElement>("timing");
 const qMarkAbs = $<HTMLSpanElement>("qmark-abs");
 const qMarkRel = $<HTMLSpanElement>("qmark-rel");
 const qThLine = $<HTMLParagraphElement>("q-thresholds");
+const qWrap = $<HTMLDivElement>("q-wrap");
+const qConstLine = $<HTMLParagraphElement>("q-const");
+const qRegimeLine = $<HTMLParagraphElement>("q-regime");
 const monoBadge = $<HTMLSpanElement>("mono");
 const titleEl = $<HTMLHeadingElement>("title");
 const gadgetEl = $<HTMLSpanElement>("gadget");
@@ -504,6 +508,72 @@ function renderThresholds() {
     `q is ${where}`;
 }
 
+/**
+ * Protocol constants q_bi, q_SN (lines and bands on the q slider) and the regime of the current
+ * q.  The positions depend only on the protocol and the slider range, never on eps.
+ * Call after renderMonotone, which fills trajLong.
+ */
+function renderRegime() {
+  const id = state.proto;
+  const p = PROTOCOLS[id];
+  const { qBi, qSN } = THRESHOLDS[id];
+  const qmax = +qRange.max;
+  qWrap.style.setProperty("--f-bi", String(qBi.q / qmax));
+  qWrap.style.setProperty("--f-sn", String(qSN.q / qmax));
+  qConstLine.innerHTML =
+    `<b class="k-bi">q<sub>bi</sub></b> = <span class="num">${qBi.q.toFixed(6)}</span> · ` +
+    `<b class="k-sn">q<sub>SN</sub></b> = <span class="num">${qSN.q.toFixed(6)}</span> (ε와 무관한 상수)` +
+    `<span class="swatch swatch-pur"></span>유일 purified` +
+    `<span class="swatch swatch-bist"></span>쌍안정` +
+    `<span class="swatch swatch-unp"></span>유일 unpurified`;
+
+  const { eps, q } = state;
+  const reg = regime(id, q);
+  const Z = zPoint(id, q);
+  const lim = orbitLimit(id, eps, q);
+  const F = (x: number) => `F = <span class="num">${x.toFixed(6)}</span>`;
+  const point = () => {
+    const [a, b] = id === "q4" ? [lim.line, lim.transverse] : [lim.transverse, lim.line];
+    return `(${p.coords[0]}, ${p.coords[1]}) = (<span class="num">${a.toFixed(6)}, ${b.toFixed(6)}</span>)`;
+  };
+  const rounds = `수렴까지 ${lim.rounds.toLocaleString("en-US")} 라운드`;
+  const open = `<span class="st-unres">미수렴: ${LIMIT_MAX_ROUNDS.toLocaleString("en-US")} 라운드 도달, 현재 ${F(lim.F)}</span>`;
+  const zText = Z.kind === "mixed"
+    ? `혼합점, ${F(Z.F)}`
+    : `B* (${p.coords[0]}* = <span class="num">${Z.line.toFixed(6)}</span>, ${p.coords[1]} = 0), ${F(Z.F)}`;
+
+  let head: string, detail: string;
+  if (reg === "unique-purified") {
+    head = "q &lt; q<sub>bi</sub>: ε와 무관하게 purify";
+    detail = lim.converged ? `→ P<sub>B</sub>, ${F(lim.F)}, ${point()}, ${rounds}` : `→ P<sub>B</sub>, ${open}`;
+  } else if (reg === "bistable") {
+    head = "q<sub>bi</sub> ≤ q ≤ q<sub>SN</sub>: 쌍안정, ε에 따라 갈림";
+    const low = Math.abs(lim.F - Z.F) < 1e-6;
+    detail = lim.converged
+      ? `이 ε → ${low ? `Z(q) = ${zText}` : `P<sub>B</sub>, ${F(lim.F)}, ${point()}`}, ${rounds}`
+      : open;
+  } else {
+    head = "q &gt; q<sub>SN</sub>: ε와 무관하게 purify되지 않음";
+    detail = `→ Z(q) = ${zText}`;
+    if (!lim.converged) detail += ` · ${open}`;
+    else if (Math.abs(lim.F - Z.F) > 1e-6) {
+      detail += ` · <span class="st-unres">이 궤도의 극한 ${F(lim.F)}, Z(q)와 다름</span>`;
+    } else detail += `, ${rounds}`;
+  }
+  if (!(eps > 0 && eps < 1)) {
+    detail = `<span class="st-unres">ε = ${eps}: 정리 범위(0 &lt; ε &lt; 1) 밖, 이 궤도의 극한 ${F(lim.F)}</span>`;
+  }
+  // A transverse component that is exactly 0 below q_bi cannot be the true limit.
+  const tr = id === "q4" ? trajLong.v[MAX_N + 1] : trajLong.u[MAX_N + 1];
+  const inDomain = eps > 0 && eps < 1;
+  const stuck = reg === "unique-purified" && inDomain && tr === 0;
+  if (stuck || (reg === "unique-purified" && inDomain && lim.belowFloat64)) {
+    detail += ` · <span class="st-unres">transverse 성분 float64 underflow: 극한은 log 추적 값${stuck ? ", 차트 궤도는 불변선에 갇힌 값" : ""}</span>`;
+  }
+  qRegimeLine.className = `qth-line regime ${{ "unique-purified": "pur", bistable: "bist", "unique-unpurified": "unp" }[reg]}`;
+  qRegimeLine.innerHTML = `<b>${head}</b> ${detail}`;
+}
+
 /** Monotonicity verdict for F_n over a fixed horizon of MAX_N rounds. */
 function renderMonotone() {
   PROTOCOLS[state.proto].compute(trajLong, state.eps, state.q, MAX_N);
@@ -545,6 +615,7 @@ function frame() {
     dataDirty = false;
     PROTOCOLS[state.proto].compute(traj, state.eps, state.q, state.N);
     renderMonotone();
+    renderRegime();
     const t1 = performance.now();
     renderThresholds();
     pushData();
@@ -575,6 +646,7 @@ function setQRange(full: boolean) {
   qRange.max = full ? "1" : "0.2";
   qRange.value = String(state.q);
   renderThresholds();
+  renderRegime();
 }
 
 function setSelected(n: number) {
@@ -675,6 +747,7 @@ const restored = document.querySelector<HTMLInputElement>('input[name="proto"]:c
 if (restored && restored.value !== state.proto) setProtocol(restored.value as ProtocolId);
 PROTOCOLS[state.proto].compute(traj, state.eps, state.q, state.N);
 renderMonotone();
+renderRegime();
 renderThresholds();
 buildCharts();
 renderSummary();

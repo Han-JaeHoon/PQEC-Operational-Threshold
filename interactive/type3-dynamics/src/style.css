@@ -20,6 +20,8 @@
   --c-sel: rgba(31, 95, 191, 0.55);
   --c-qabs: #b45309;
   --c-qrel: #0e7490;
+  --c-qbi: #7c3aed;
+  --c-qsn: #be185d;
   color-scheme: light;
 }
 
@@ -46,6 +48,8 @@
     --c-sel: rgba(127, 176, 255, 0.6);
     --c-qabs: #f59e0b;
     --c-qrel: #22d3ee;
+    --c-qbi: #8b7cf6;
+    --c-qsn: #fb7185;
     color-scheme: dark;
   }
 }
@@ -96,8 +100,8 @@ h2 { font-size: 14px; margin: 0; font-weight: 600; }
 .chk { font-size: 12px; color: var(--muted); white-space: nowrap; }
 
 /* analytic q_abs / q_rel ticks under the q slider */
-.range-wrap { position: relative; min-width: 0; }
-.range-wrap input[type="range"] { display: block; margin: 0; }
+.range-wrap { position: relative; min-width: 0; margin: 16px 0 6px; }
+.range-wrap input[type="range"] { display: block; margin: 0; position: relative; background: transparent; }
 .qmarks {
   position: absolute;
   inset: 0;
@@ -117,6 +121,48 @@ h2 { font-size: 14px; margin: 0; font-weight: 600; }
 .qmark[hidden] { display: none; }
 .qmark-abs { background: var(--c-qabs); }
 .qmark-rel { background: var(--c-qrel); }
+/* protocol constants q_bi, q_SN: full-height lines over three tinted regime bands */
+.qbands {
+  position: absolute;
+  inset: -5px 0;
+  --thumb: 16px;
+  --x-bi: calc(var(--thumb) / 2 + var(--f-bi, 0) * (100% - var(--thumb)));
+  --x-sn: calc(var(--thumb) / 2 + var(--f-sn, 0) * (100% - var(--thumb)));
+}
+.qband { position: absolute; top: 0; bottom: 0; }
+.qband-pur { left: 0; width: var(--x-bi); border-radius: 3px 0 0 3px; }
+.qband-bist { left: var(--x-bi); width: calc(var(--x-sn) - var(--x-bi)); }
+.qband-unp { left: var(--x-sn); right: 0; border-radius: 0 3px 3px 0; }
+.qband-pur, .swatch-pur { background: color-mix(in srgb, var(--c-inc) 16%, transparent); }
+.qband-bist, .swatch-bist { background: color-mix(in srgb, var(--c-unres) 24%, transparent); }
+.qband-unp, .swatch-unp { background: color-mix(in srgb, var(--c-dec) 16%, transparent); }
+.qmark-const { bottom: -5px; top: -5px; height: auto; }
+.qmark-bi { --f: var(--f-bi); background: var(--c-qbi); }
+.qmark-sn { --f: var(--f-sn); background: var(--c-qsn); }
+.qmark-const i {
+  position: absolute;
+  bottom: 100%;
+  font: 500 10px/1.2 -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif;
+  white-space: nowrap;
+}
+.qmark-const sub { font-size: 8px; line-height: 0; }
+/* outward from the line, so the two never collide however close they are */
+.qmark-bi i { right: 0; color: var(--c-qbi); }
+.qmark-sn i { left: 0; color: var(--c-qsn); }
+.swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin: 0 3px 0 8px;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  vertical-align: -1px;
+}
+.regime { color: var(--fg); padding: 3px 7px; border-radius: 4px; }
+.regime b { font-weight: 600; }
+.regime.pur { background: color-mix(in srgb, var(--c-inc) 12%, transparent); }
+.regime.bist { background: color-mix(in srgb, var(--c-unres) 16%, transparent); }
+.regime.unp { background: color-mix(in srgb, var(--c-dec) 12%, transparent); }
 .qth-line {
   grid-column: 2 / -1;
   margin: 0;
@@ -127,6 +173,8 @@ h2 { font-size: 14px; margin: 0; font-weight: 600; }
 .qth-line b { font-weight: 500; }
 .qth-line .k-abs { color: var(--c-qabs); }
 .qth-line .k-rel { color: var(--c-qrel); }
+.qth-line .k-bi { color: var(--c-qbi); }
+.qth-line .k-sn { color: var(--c-qsn); }
 .qth-line .num { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
 
 /* quiet monotonicity verdict next to the F_n title */
