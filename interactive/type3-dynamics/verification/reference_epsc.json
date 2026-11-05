@@ -1,0 +1,203 @@
+{
+ "note": "lo, hi from src/epsc.ts; sides certified independently with arb (+1: P_B, -1: Z)",
+ "rows": [
+  {
+   "protocol": "q4",
+   "q": 0.1762,
+   "lo": 0.8821430864174589,
+   "hi": 0.8821430864177503,
+   "width": 2.914335439641036e-13,
+   "arb_side_lo": 1,
+   "arb_rounds_lo": 2284,
+   "arb_side_hi": -1,
+   "arb_rounds_hi": 2272
+  },
+  {
+   "protocol": "q4",
+   "q": 0.17712345,
+   "lo": 0.8573408909473075,
+   "hi": 0.8573408909474607,
+   "width": 1.532107773982716e-13,
+   "arb_side_lo": 1,
+   "arb_rounds_lo": 1068,
+   "arb_side_hi": -1,
+   "arb_rounds_hi": 1052
+  },
+  {
+   "protocol": "q4",
+   "q": 0.1785,
+   "lo": 0.8243388244944976,
+   "hi": 0.8243388244946275,
+   "width": 1.2989609388114332e-13,
+   "arb_side_lo": 1,
+   "arb_rounds_lo": 830,
+   "arb_side_hi": -1,
+   "arb_rounds_hi": 828
+  },
+  {
+   "protocol": "q4",
+   "q": 0.1801,
+   "lo": 0.7729376360814821,
+   "hi": 0.7729376360817346,
+   "width": 2.524647157997606e-13,
+   "arb_side_lo": 1,
+   "arb_rounds_lo": 1064,
+   "arb_side_hi": -1,
+   "arb_rounds_hi": 1046
+  },
+  {
+   "protocol": "q4",
+   "q": 0.1806,
+   "lo": 0.7392498648263317,
+   "hi": 0.7392498648270842,
+   "width": 7.525091660909311e-13,
+   "arb_side_lo": 1,
+   "arb_rounds_lo": 2405,
+   "arb_side_hi": -1,
+   "arb_rounds_hi": 2412
+  },
+  {
+   "protocol": "q4",
+   "q": 0.17584,
+   "lo": 0.9122246070686323,
+   "hi": 0.9122246070743438,
+   "width": 5.711542350184118e-12,
+   "arb_side_lo": 1,
+   "arb_rounds_lo": 61992,
+   "arb_side_hi": -1,
+   "arb_rounds_hi": 63561
+  },
+  {
+   "protocol": "type4",
+   "q": 0.17955,
+   "lo": 0.9418737386940932,
+   "hi": 0.9418737386942382,
+   "width": 1.4499512701604544e-13,
+   "arb_side_lo": 1,
+   "arb_rounds_lo": 1556,
+   "arb_side_hi": -1,
+   "arb_rounds_hi": 1554
+  },
+  {
+   "protocol": "type4",
+   "q": 0.1808,
+   "lo": 0.9285858642546616,
+   "hi": 0.9285858642548218,
+   "width": 1.602051824534101e-13,
+   "arb_side_lo": 1,
+   "arb_rounds_lo": 853,
+   "arb_side_hi": -1,
+   "arb_rounds_hi": 855
+  },
+  {
+   "protocol": "type4",
+   "q": 0.180828,
+   "lo": 0.9283074691867016,
+   "hi": 0.9283074691867916,
+   "width": 9.00390872971002e-14,
+   "arb_side_lo": 1,
+   "arb_rounds_lo": 868,
+   "arb_side_hi": -1,
+   "arb_rounds_hi": 872
+  },
+  {
+   "protocol": "type4",
+   "q": 0.183,
+   "lo": 0.9066786253358786,
+   "hi": 0.9066786253359937,
+   "width": 1.1513012765362873e-13,
+   "arb_side_lo": 1,
+   "arb_rounds_lo": 629,
+   "arb_side_hi": -1,
+   "arb_rounds_hi": 624
+  },
+  {
+   "protocol": "type4",
+   "q": 0.1871,
+   "lo": 0.8556253365757985,
+   "hi": 0.8556253365759148,
+   "width": 1.162403506782539e-13,
+   "arb_side_lo": 1,
+   "arb_rounds_lo": 611,
+   "arb_side_hi": -1,
+   "arb_rounds_hi": 614
+  },
+  {
+   "protocol": "type4",
+   "q": 0.1892,
+   "lo": 0.8029243073318382,
+   "hi": 0.8029243073320824,
+   "width": 2.4424906541753444e-13,
+   "arb_side_lo": 1,
+   "arb_rounds_lo": 1416,
+   "arb_side_hi": -1,
+   "arb_rounds_hi": 1404
+  },
+  {
+   "protocol": "type3",
+   "q": 0.1185,
+   "lo": 0.9646040466955875,
+   "hi": 0.9646040466958594,
+   "width": 2.7189361873070084e-13,
+   "arb_side_lo": 1,
+   "arb_rounds_lo": 2212,
+   "arb_side_hi": -1,
+   "arb_rounds_hi": 2237
+  },
+  {
+   "protocol": "type3",
+   "q": 0.1187,
+   "lo": 0.9619335054128522,
+   "hi": 0.961933505413113,
+   "width": 2.6079138848444927e-13,
+   "arb_side_lo": 1,
+   "arb_rounds_lo": 1565,
+   "arb_side_hi": -1,
+   "arb_rounds_hi": 1539
+  },
+  {
+   "protocol": "type3",
+   "q": 0.11873,
+   "lo": 0.9615617248021813,
+   "hi": 0.961561724802412,
+   "width": 2.3070434451710753e-13,
+   "arb_side_lo": 1,
+   "arb_rounds_lo": 1494,
+   "arb_side_hi": -1,
+   "arb_rounds_hi": 1512
+  },
+  {
+   "protocol": "type3",
+   "q": 0.1205,
+   "lo": 0.9426165360272607,
+   "hi": 0.9426165360274423,
+   "width": 1.816324868286756e-13,
+   "arb_side_lo": 1,
+   "arb_rounds_lo": 685,
+   "arb_side_hi": -1,
+   "arb_rounds_hi": 685
+  },
+  {
+   "protocol": "type3",
+   "q": 0.1277,
+   "lo": 0.85092973734811,
+   "hi": 0.8509297373482164,
+   "width": 1.0647038806155251e-13,
+   "arb_side_lo": 1,
+   "arb_rounds_lo": 460,
+   "arb_side_hi": -1,
+   "arb_rounds_hi": 452
+  },
+  {
+   "protocol": "type3",
+   "q": 0.1303,
+   "lo": 0.7778900872052155,
+   "hi": 0.7778900872055308,
+   "width": 3.1530333899354446e-13,
+   "arb_side_lo": 1,
+   "arb_rounds_lo": 965,
+   "arb_side_hi": -1,
+   "arb_rounds_hi": 964
+  }
+ ]
+}

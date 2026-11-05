@@ -107,6 +107,86 @@ export function regime(protocol: RegimeProtocol, q: number): Regime {
   return q <= t.qSN.q ? "bistable" : "unique-unpurified";
 }
 
+// ---------------------------------------------------------------- exact side of a threshold
+/** A finite float64 as an exact dyadic rational num / 2^k. */
+function dyadic(x: number): { num: bigint; k: number } {
+  if (x === 0) return { num: 0n, k: 0 };
+  const dv = new DataView(new ArrayBuffer(8));
+  dv.setFloat64(0, x);
+  const bits = dv.getBigUint64(0);
+  const exp = Number((bits >> 52n) & 0x7ffn);
+  const frac = bits & 0xfffffffffffffn;
+  const mant = exp === 0 ? frac : frac | (1n << 52n);
+  const e = (exp === 0 ? 1 : exp) - 1075;
+  const signed = bits >> 63n ? -mant : mant;
+  return e >= 0 ? { num: signed << BigInt(e), k: 0 } : { num: signed, k: -e };
+}
+
+/** Exact sign of the polynomial at the rational s = num / 2^k (integer coefficients). */
+function polySignAt(poly: readonly number[], num: bigint, k: number): number {
+  // Horner on the numerator of poly(s) * 2^(k * degree)
+  const K = BigInt(k);
+  let acc = 0n;
+  let scale = 0n;
+  for (const c of poly) {
+    acc = acc * num + (BigInt(c) << scale);
+    scale += K;
+  }
+  return acc > 0n ? 1 : acc < 0n ? -1 : 0;
+}
+
+/**
+ * Exact sign of q - q_root for this float64 q: 1 above, -1 below, 0 exactly on the root.  It uses
+ * the polynomial and its bracket, not the rounded decimal `root.q`.  A float64 q is a dyadic
+ * rational and these polynomials have no dyadic root in their brackets, so 0 does not occur for
+ * the protocol constants (verification/verify_epsc_polys.py).
+ */
+export function sideOfRoot(root: ThresholdRoot, q: number): number {
+  const { num: qn, k } = dyadic(q);
+  const sNum = (1n << BigInt(k)) - qn; // s = 1 - q exactly
+  const [loS, hiS] = root.bracket;
+  const lo = dyadic(loS), hi = dyadic(hiS);
+  const cmp = (a: { num: bigint; k: number }) => {
+    const K = Math.max(a.k, k);
+    return (sNum << BigInt(K - k)) - (a.num << BigInt(K - a.k));
+  };
+  if (cmp(lo) <= 0n) return 1; //  s <= bracket low end: s below the root, q above it
+  if (cmp(hi) >= 0n) return -1;
+  const here = polySignAt(root.poly, sNum, k);
+  if (here === 0) return 0;
+  return here === polySignAt(root.poly, hi.num, hi.k) ? -1 : 1; // same sign as hi end: s above root
+}
+
+export type ExactRegime = Regime | "on-threshold";
+
+export interface RegimeReport {
+  regime: ExactRegime;
+  /** q < q_m exactly (so Z(q) = B*), otherwise Z(q) is the mixed point. */
+  belowQm: boolean;
+  /** q agrees with this constant up to the digits it is quoted to. */
+  near: "qBi" | "qSN" | null;
+  /** 0 < q < 1: the range of the theorems. */
+  inRange: boolean;
+}
+
+/** |q - constant| below this counts as "at the threshold" for display. */
+export const BOUNDARY_TOL = 1e-9;
+
+/** Regime of this exact float64 q, from the sign of the polynomials. */
+export function regimeReport(protocol: RegimeProtocol, q: number): RegimeReport {
+  const t = THRESHOLDS[protocol];
+  const bi = sideOfRoot(t.qBi, q);
+  const sn = sideOfRoot(t.qSN, q);
+  const regime: ExactRegime = bi === 0 || sn === 0 ? "on-threshold"
+    : bi < 0 ? "unique-purified" : sn < 0 ? "bistable" : "unique-unpurified";
+  return {
+    regime,
+    belowQm: sideOfRoot(t.qM, q) < 0,
+    near: Math.abs(q - t.qBi.q) < BOUNDARY_TOL ? "qBi" : Math.abs(q - t.qSN.q) < BOUNDARY_TOL ? "qSN" : null,
+    inRange: q > 0 && q < 1,
+  };
+}
+
 /** (A, B) of the Type-3/4 map. */
 const AB = { type3: [6, 4], type4: [4, 2] } as const;
 
@@ -119,14 +199,14 @@ export interface ZPoint {
 
 /** The separable attractor Z(q): B* for q < q_m, otherwise the mixed point. */
 export function zPoint(protocol: RegimeProtocol, q: number): ZPoint {
-  if (q >= THRESHOLDS[protocol].qM.q) return { kind: "mixed", line: 0, F: 0.25 };
+  if (sideOfRoot(THRESHOLDS[protocol].qM, q) >= 0) return { kind: "mixed", line: 0, F: 0.25 };
   const s = 1 - q;
   let line: number;
   if (protocol === "q4") {
-    line = Math.sqrt((s ** 4 + s ** 3 - 1) / s ** 5);
+    line = Math.sqrt(Math.max(0, s ** 4 + s ** 3 - 1) / s ** 5);
   } else {
     const [A, B] = AB[protocol];
-    line = Math.sqrt((s ** (A - 1) * (1 + s) - 1) / s ** B);
+    line = Math.sqrt(Math.max(0, s ** (A - 1) * (1 + s) - 1) / s ** B);
   }
   return { kind: "boundary", line, F: (1 + line) / 4 };
 }

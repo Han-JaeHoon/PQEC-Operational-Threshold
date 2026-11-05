@@ -69,9 +69,9 @@ low attractor. They live in [`src/regimes.ts`](src/regimes.ts) with their polyno
 | Type 4 | 0.1789326522 | 0.1894166559 | 0.1808274866 |
 | 4Q | 0.1758332653 | 0.1806697260 | 0.1808274866 |
 
-- `q < q_bi`: every `ε ∈ (0,1)` converges to the same purified fixed point `P_B`.
-- `q_bi ≤ q ≤ q_SN`: bistable. Small `ε` goes to `P_B`, `ε` near 1 goes to `Z(q)`. Just below
-  `q_SN`, `P_B` itself has `F < 1/2`.
+- `q < q_bi`: every `ε ∈ (0,1)` converges to the same Bell-connected fixed point `P_B`.
+- `q_bi < q < q_SN`: bistable. `ε < ε_c(q)` goes to `P_B`, `ε > ε_c(q)` goes to `Z(q)`. Just below
+  `q_SN`, `P_B` itself has `F < 1/2`, so reaching `P_B` is not the same as a fidelity gain.
 - `q > q_SN`: every `ε ∈ (0,1)` converges to the same separable point `Z(q)`. `Z(q)` is the
   boundary point `B*` for `q < q_m`, which only 4Q reaches beyond `q_SN`, and the mixed point
   (`F = 1/4`) otherwise.
@@ -80,7 +80,62 @@ The q slider draws both constants as lines over three tinted bands, and the line
 the regime of the current `q` with the limit of the current orbit. That limit comes from a separate
 orbit of up to 200,000 rounds, not from the charts, which stop at 500. It carries the transverse
 component as a logarithm, so underflow cannot trap it on the invariant line, and a tiny component
-that is still growing is never read as convergence. Running out of rounds shows "미수렴".
+that is still growing is never read as convergence. Running out of rounds shows "미수렴". This
+orbit is uncertified and is labelled so; it never decides the attractor.
+
+The regime shown comes from `regimeReport` in `src/regimes.ts`: the exact sign of the polynomial at
+the float64 `q`, in BigInt arithmetic, not a comparison with the rounded constants. A float64 `q` is
+a dyadic rational and none of these polynomials has a rational root in its bracket, so `q` is never
+exactly on a threshold. Within `1e-9` of `q_bi` or `q_SN` the panel adds a boundary note.
+
+## The threshold ε_c(q)
+
+The "Asymptotic attractor" panel states what the theorems give for the current `(q, ε)`, separately
+from the round-by-round charts. In the bistable window it shows a certified interval
+`ε_L < ε_c(q) < ε_U`, compares `ε` with it, and marks it on the ε slider.
+
+`ε ≤ ε_L` predicts `P_B`, `ε ≥ ε_U` predicts `Z(q)`, and in between the panel says the basin is not
+determined. No theorem is applied at `ε = 0`, `ε = 1`, `q = 0` or `q = 1`.
+
+**Algorithm** ([`src/epsc.ts`](src/epsc.ts)). Theorem 2.1 of the Nov 5 calculation notes: if
+`T^n p_ε` is strictly above the saddle `S` in the order (`t_n > t_S`, `m_n < m_S`) then `ε < ε_c`, and
+if strictly below then `ε > ε_c`. `S` is enclosed from its closed form, Eqs. 16-22. A bisection between
+the closed-form bounds `L_0`, `U_0` of Eqs. 39-42 tests one input at a time. Exact root isolation
+of `t_n(ε) = t_S` is not used, because the degree grows like `2^n`.
+
+**What is certified.** Every float64 result is rounded outward. `T` preserves the order, so a box maps
+inside the images of its two corners. Each endpoint of the interval carries its own certificate, and
+so does every intermediate interval shown while the computation runs. The certificate relies on the
+proved order property and global convergence (Facts 1-4 of the notes). The bisection only chooses
+which inputs to test.
+
+**What is not certified.** The `float64 orbit` rows, and the charts. The midpoint `ε_c ≈` is only the
+centre of the interval. Point values of `P_B` and `Z(q)` are float64 values printed to 6 digits.
+No table, interpolation or fit is used; `tests/epsc.test.ts` checks that `src/` reads no table.
+
+**Accuracy and speed.** Measured widths are about `1e-13` through most of the window and `1e-12` to
+`1e-11` near its ends, with a typical run of 1 to 40 ms in a Web Worker. Closer than about `1e-7` to
+`q_bi`, convergence takes more than the 2,000,000 rounds allowed per input: the panel then keeps the
+valid wider interval and says "계산 미완료". Going further would need more than float64.
+
+**Checks.**
+
+```bash
+npm test
+```
+
+```bash
+python verification/verify_epsc_polys.py
+```
+
+```bash
+python verification/generate_reference_epsc.py
+```
+
+`npm test` includes all 57 rows of the research tables (`verification/epsc_research/`, regression
+only). `verify_epsc_polys.py` checks the polynomials and the map identity exactly. The last
+script needs python-flint and mpmath: it certifies the simulator's endpoints at 18 off-grid `q`, using
+a different certificate (Proposition 4 of the `ε_c` note) in 256-bit ball arithmetic.
 
 ## The model
 

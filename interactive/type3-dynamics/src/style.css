@@ -150,6 +150,32 @@ h2 { font-size: 14px; margin: 0; font-weight: 600; }
 .qmark-bi i { right: 0; color: var(--c-qbi); }
 .qmark-sn i { left: 0; color: var(--c-qsn); }
 .no-constants .qbands, .no-constants .qmark-const { display: none; }
+/* certified eps_c bracket on the eps slider; at least 2px wide however narrow the bracket is */
+.emark {
+  position: absolute;
+  top: -5px;
+  bottom: -5px;
+  min-width: 2px;
+  margin-left: -1px;
+  border-radius: 1px;
+  background: var(--c-qsn);
+  left: calc(var(--thumb) / 2 + var(--f0, 0) * (100% - var(--thumb)));
+  width: calc((var(--f1, 0) - var(--f0, 0)) * (100% - var(--thumb)));
+}
+.emark[hidden] { display: none; }
+.emark i {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  color: var(--c-qsn);
+  font: 500 10px/1.2 -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif;
+  white-space: nowrap;
+}
+.emark sub { font-size: 8px; line-height: 0; }
+.ctl-eps { align-content: start; }
+.f0-line { text-align: right; }
+#attractor td { word-break: normal; }
 .swatch {
   display: inline-block;
   width: 10px;
