@@ -74,11 +74,24 @@ h1 { font-size: 18px; margin: 0 0 4px; font-weight: 600; }
 h2 { font-size: 14px; margin: 0; font-weight: 600; }
 .conv { margin: 0 0 10px; color: var(--muted); font-size: 12.5px; }
 
+/* header: eps and q on the wide left (2), N and the inspected round n on the right (1) */
 .controls {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px 24px;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 10px 32px;
 }
+.controls-main, .controls-side { display: grid; gap: 6px; align-content: start; min-width: 0; }
+/* same columns in both rows, so the eps and q sliders have the same length and start */
+.controls-main .ctl { grid-template-columns: 8.2em minmax(0, 1fr) 7.5em 3.6em; }
+.controls-side .ctl { grid-template-columns: 5.5em minmax(0, 1fr) 6em; }
+.qth-list {
+  grid-column: 2 / -1;
+  margin: 0;
+  padding-left: 1.1em;
+  display: grid;
+  gap: 3px;
+}
+.qth-list li::marker { color: var(--muted); }
 .ctl {
   display: grid;
   grid-template-columns: auto 1fr 7.5em auto;
@@ -153,7 +166,7 @@ h2 { font-size: 14px; margin: 0; font-weight: 600; }
 #q-wrap { margin-bottom: 44px; }
 /* subscripts must not change the height of a threshold line; two lines are always reserved */
 .qth-line :is(sub, sup) { line-height: 0; }
-#q-thresholds { min-height: calc(2 * 1.4em); }
+#q-thresholds { min-height: calc(1.4em); }
 #q-regime { min-height: calc(2 * 1.4em + 6px); }
 /* protocol constants q_bi, q_SN: full-height lines over three tinted regime bands */
 .qbands {
@@ -333,6 +346,6 @@ table.kv tr.sep th, table.kv tr.sep td { border-top: 1px solid var(--border); pa
 .u-over { cursor: crosshair; }
 
 @media (max-width: 1100px) {
-  .controls { grid-template-columns: 1fr; }
+  .controls { grid-template-columns: minmax(0, 1fr); }
   .layout { grid-template-columns: minmax(0, 1fr); }
 }

@@ -73,7 +73,8 @@ const state = {
   eps: 0.1,
   q: 0.0327,
   N: 30,
-  sel: 0,
+  /** Round shown in the inspector; starts at N and follows N while it is there. */
+  sel: 30,
   qFull: false,
   fAxis: "auto" as "auto" | "fixed",
   dAxis: "lin" as "lin" | "asinh",
@@ -101,10 +102,11 @@ const precWarn = $<HTMLParagraphElement>("precision-warn");
 const timing = $<HTMLSpanElement>("timing");
 const qMarkAbs = $<HTMLSpanElement>("qmark-abs");
 const qMarkRel = $<HTMLSpanElement>("qmark-rel");
-const qThLine = $<HTMLParagraphElement>("q-thresholds");
+const qThLine = $<HTMLElement>("q-thresholds");
+const qGainLine = $<HTMLElement>("q-gain-line");
 const qWrap = $<HTMLDivElement>("q-wrap");
-const qConstLine = $<HTMLParagraphElement>("q-const");
-const qRegimeLine = $<HTMLParagraphElement>("q-regime");
+const qConstLine = $<HTMLElement>("q-const");
+const qRegimeLine = $<HTMLElement>("q-regime");
 const f0El = $<HTMLSpanElement>("f0");
 const epsMark = $<HTMLSpanElement>("epsmark");
 const attractorPanel = $<HTMLDivElement>("attractor-panel");
@@ -507,12 +509,15 @@ function renderSummary() {
 }
 
 /** q_gain(eps) clause of the threshold line (Nov 6 note); the panel has the full certificate. */
-function gainClause(): string {
-  if (state.proto === "bbpssw") return "";
-  const b = qGainBracket(state.proto, state.eps);
-  return b
-    ? ` · <b class="k-gain">q<sub>gain</sub>(ε)</b> = <span class="num">${((b.lo + b.hi) / 2).toFixed(6)}</span>`
-    : ` · <b class="k-gain">q<sub>gain</sub></b>: 0 &lt; ε &lt; 2/3에서만`;
+function renderGainLine() {
+  const id = state.proto;
+  qGainLine.hidden = id === "bbpssw";
+  if (id === "bbpssw") return;
+  const b = qGainBracket(id, state.eps);
+  qGainLine.innerHTML = b
+    ? `<b class="k-gain">q<sub>gain</sub>(ε)</b> = <span class="num">${((b.lo + b.hi) / 2).toFixed(6)}</span>` +
+      ` (asymptotic fidelity gain: F<sub>∞</sub> &gt; F<sub>0</sub> iff q &lt; q<sub>gain</sub>)`
+    : `<b class="k-gain">q<sub>gain</sub></b>: 0 &lt; ε &lt; 2/3에서만 정의`;
 }
 
 /** Analytic q_abs / q_rel (calculation notes) as ticks on the q slider + one text line. */
@@ -520,9 +525,10 @@ function renderThresholds() {
   if (state.proto === "bbpssw") {
     qMarkAbs.hidden = qMarkRel.hidden = true;
     qThLine.textContent = "BBPSSW: threshold 미표시";
+    renderGainLine();
     return;
   }
-  const gain = gainClause();
+  renderGainLine();
   const p = PROTOCOLS[state.proto];
   const a = p.qAbs(state.eps);
   const r = p.qRel(state.eps);
@@ -539,7 +545,6 @@ function renderThresholds() {
         `defined only for entangled input, ${p.absDomain}`
       : `<b class="k-abs">q<sub>abs</sub></b> defined only for ${p.absDomain}, ` +
         `<b class="k-rel">q<sub>rel</sub></b> only for ${p.relDomain}`;
-    qThLine.innerHTML += gain;
     return;
   }
   if (!absOk) {
@@ -547,14 +552,14 @@ function renderThresholds() {
     qThLine.innerHTML =
       `<b class="k-abs">q<sub>abs</sub></b>: defined only for ${p.absDomain} · ` +
       `<b class="k-rel">q<sub>rel</sub>(ε)</b> = <span class="num">${r.toFixed(6)}</span> · ` +
-      `q is ${state.q < r ? "below" : "above"} q<sub>rel</sub>` + gain;
+      `q is ${state.q < r ? "below" : "above"} q<sub>rel</sub>`;
     return;
   }
   const where = state.q < a ? "below both" : state.q < r ? "between q<sub>abs</sub> and q<sub>rel</sub>" : "above both";
   qThLine.innerHTML =
     `<b class="k-abs">q<sub>abs</sub>(ε)</b> = <span class="num">${a.toFixed(6)}</span> · ` +
     `<b class="k-rel">q<sub>rel</sub>(ε)</b> = <span class="num">${r.toFixed(6)}</span> · ` +
-    `q is ${where}` + gain;
+    `q is ${where}`;
 }
 
 /** The float64 orbit limit of the current (protocol, eps, q), once renderRegime has computed it. */
@@ -762,10 +767,12 @@ function setSelected(n: number) {
 }
 
 function setN(n: number) {
+  // the inspected round stays on the last round while it is there; otherwise it keeps its value
+  const follow = state.sel === state.N;
   state.N = clamp(Math.round(n), 1, MAX_N);
   nRange.value = nNum.value = String(state.N);
   selRange.max = selNum.max = String(state.N);
-  if (state.sel > state.N) setSelected(state.N);
+  if (follow || state.sel > state.N) setSelected(state.N);
   schedule(true);
 }
 
