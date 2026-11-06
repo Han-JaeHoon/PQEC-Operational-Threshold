@@ -22,6 +22,7 @@
   --c-qrel: #0e7490;
   --c-qbi: #7c3aed;
   --c-qsn: #be185d;
+  --c-qtarget: #a21caf;
   color-scheme: light;
 }
 
@@ -50,6 +51,7 @@
     --c-qrel: #22d3ee;
     --c-qbi: #8b7cf6;
     --c-qsn: #fb7185;
+    --c-qtarget: #e879f9;
     color-scheme: dark;
   }
 }
@@ -137,6 +139,7 @@ h2 { font-size: 14px; margin: 0; font-weight: 600; }
 .qmark-abs { background: var(--c-qabs); }
 .qmark-rel { background: var(--c-qrel); }
 .qmark-gain { background: var(--c-inc); }
+.qmark-target { background: var(--c-qtarget); }
 /* eps-dependent thresholds: full-height lines like q_bi / q_SN, names below the slider.
    q_abs, q_rel and q_gain are often only pixels apart, so each name has its own fixed row
    (abs, rel, gain from the top) with a dotted leader up to its line.  All three rows are always
@@ -144,6 +147,7 @@ h2 { font-size: 14px; margin: 0; font-weight: 600; }
 .qmark-var { top: -5px; bottom: -5px; height: auto; --row: 0; }
 .qmark-rel { --row: 1; }
 .qmark-gain { --row: 2; }
+.qmark-target { --row: 3; }
 .qmark-var::after {
   content: "";
   position: absolute;
@@ -165,7 +169,30 @@ h2 { font-size: 14px; margin: 0; font-weight: 600; }
 .qmark-abs { color: var(--c-qabs); }
 .qmark-rel { color: var(--c-qrel); }
 .qmark-gain { color: var(--c-inc); }
-#q-wrap { margin-bottom: 44px; }
+.qmark-target { color: var(--c-qtarget); }
+/* q_target = q_gain (F_target = F_0): one threshold, drawn in both colours */
+.qmark-target.same-gain { background: linear-gradient(var(--c-qtarget) 50%, var(--c-inc) 50%); }
+/* the names (not the lines over the slider) take the pointer, for their tooltips */
+.qmark-var i { pointer-events: auto; cursor: help; }
+#q-wrap { margin-bottom: 58px; }
+
+/* Target fidelity: under the right end of the q slider, number box under the q box */
+.tgt-slot {
+  grid-column: 2;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 4px 10px;
+  min-width: 0;
+}
+.ctl .tgt-slot input[type="range"] { flex: 0 1 9.5em; width: 9.5em; min-width: 6em; accent-color: var(--accent); }
+.tgt-label { white-space: nowrap; font-weight: 500; }
+.tgt-label sub { line-height: 0; }
+.tgt-msg { flex: 1 1 12em; min-width: 0; text-align: right; font-size: 11.5px; color: var(--c-dec); }
+.tgt-msg:empty { display: none; }
+#tgt-num { grid-column: 3; }
+#tgt-num[aria-invalid="true"] { border-color: var(--c-dec); }
 /* subscripts must not change the height of a threshold line; two lines are always reserved */
 .qth-line :is(sub, sup) { line-height: 0; }
 #q-thresholds { min-height: calc(1.4em); }
@@ -224,11 +251,11 @@ h2 { font-size: 14px; margin: 0; font-weight: 600; }
 .emark sub { font-size: 8px; line-height: 0; }
 .ctl-eps { align-content: start; }
 .f0-line { text-align: right; }
-#attractor td, #gain td { word-break: normal; }
+#attractor td, #gain td, #target td { word-break: normal; }
 /* sub/superscripts must not make one row taller than another */
-#attractor :is(sub, sup), #gain :is(sub, sup) { line-height: 0; }
+#attractor :is(sub, sup), #gain :is(sub, sup), #target :is(sub, sup) { line-height: 0; }
 /* rows that usually wrap reserve two lines in every state, so the panel height stays put */
-#attractor tr.two-line td, #gain tr.two-line td { height: calc(2 * 1.4em + 6px); line-height: 1.4; }
+#attractor tr.two-line td, #gain tr.two-line td, #target tr.two-line td { height: calc(2 * 1.4em + 6px); line-height: 1.4; }
 .swatch {
   display: inline-block;
   width: 10px;
@@ -256,6 +283,9 @@ h2 { font-size: 14px; margin: 0; font-weight: 600; }
 .qth-line .k-bi { color: var(--c-qbi); }
 .qth-line .k-sn { color: var(--c-qsn); }
 .qth-line .k-gain { color: var(--c-inc); }
+.qth-line .k-target { color: var(--c-qtarget); }
+.qth-line .k-note { color: var(--muted); }
+.hint-inline { color: var(--muted); font-size: 11px; white-space: nowrap; }
 .qth-line .num { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
 
 /* quiet monotonicity verdict next to the F_n title */

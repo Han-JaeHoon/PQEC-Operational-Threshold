@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Type-3 PQEC Dynamics</title>
+  <title>Type-3 Entanglement Purification Dynamics</title>
 </head>
 <body>
   <header class="top">
     <div class="title">
       <div class="title-row">
-        <h1 id="title">Type-3 noisy PQEC — round-by-round dynamics</h1>
+        <h1 id="title">Type-3 noisy entanglement purification — round-by-round dynamics</h1>
         <div class="seg proto" role="radiogroup" aria-label="Protocol">
           <label><input type="radio" name="proto" value="type3" checked /> Type 3 — 16 CNOT</label>
           <label><input type="radio" name="proto" value="type4" /> Type 4 — 14 CNOT</label>
@@ -66,16 +66,24 @@
             <span id="qmark-abs" class="qmark qmark-var qmark-abs" title="q_abs(ε)"><i>q<sub>abs</sub></i></span>
             <span id="qmark-rel" class="qmark qmark-var qmark-rel" title="q_rel(ε)"><i>q<sub>rel</sub></i></span>
             <span id="qmark-gain" class="qmark qmark-var qmark-gain" title="q_gain(ε)" hidden><i>q<sub>gain</sub></i></span>
+            <span id="qmark-target" class="qmark qmark-var qmark-target" title="q_target(F_target)" hidden><i>q<sub>target</sub></i></span>
             <span class="qmark qmark-const qmark-bi"><i>q<sub>bi</sub></i></span>
             <span class="qmark qmark-const qmark-sn"><i>q<sub>SN</sub></i></span>
           </div>
         </div>
         <input id="q-num" type="number" min="0" max="1" step="0.0001" value="0.0327" />
         <label class="chk"><input id="q-full" type="checkbox" /> 0–1</label>
+        <div class="tgt-slot">
+          <span id="tgt-msg" class="tgt-msg" role="status" aria-live="polite"></span>
+          <label for="tgt-num" class="tgt-label" title="asymptotic target: F_∞ ≥ F_target, 1/2 < F_target < 1">Target fidelity F<sub>target</sub></label>
+          <input id="tgt-range" type="range" min="0.501" max="0.999" step="0.001" value="0.9" aria-label="Target fidelity slider" />
+        </div>
+        <input id="tgt-num" type="number" min="0.5" max="1" step="any" value="0.9" aria-label="Target fidelity" />
       </div>
       <ul class="qth-list">
         <li id="q-thresholds" class="qth-line"></li>
         <li id="q-gain-line" class="qth-line"></li>
+        <li id="q-target-line" class="qth-line"></li>
         <li id="q-const" class="qth-line"></li>
       </ul>
     </div>
@@ -132,6 +140,11 @@
         <div class="panel-head"><h2>Asymptotic Fidelity Gain Threshold</h2></div>
         <p class="hint">F<sub>∞</sub> &gt; F<sub>0</sub> 판정 (Nov 6 노트, Theorem 7.2). 라운드마다의 증가(q<sub>th</sub>)나 자원 기준과는 다릅니다. q 슬라이더의 초록 눈금이 q<sub>gain</sub>(ε)입니다.</p>
         <table id="gain" class="kv"></table>
+      </div>
+      <div id="target-panel" class="panel">
+        <div class="panel-head"><h2>Asymptotic Target-Fidelity Threshold</h2></div>
+        <p class="hint">F<sub>∞</sub> ≥ F<sub>target</sub> 판정 (Nov 6 노트, Theorem 1.1 / 5.1). q<sub>target</sub> = F<sub>B</sub><sup>−1</sup>(F<sub>target</sub>)는 ε와 무관합니다. 유한 라운드의 F<sub>n</sub> ≥ F<sub>target</sub>는 마지막 줄에 따로 표시합니다.</p>
+        <table id="target" class="kv"></table>
       </div>
     </aside>
   </main>

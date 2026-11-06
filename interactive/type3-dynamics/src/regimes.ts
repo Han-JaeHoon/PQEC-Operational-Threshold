@@ -109,7 +109,7 @@ export function regime(protocol: RegimeProtocol, q: number): Regime {
 
 // ---------------------------------------------------------------- exact side of a threshold
 /** A finite float64 as an exact dyadic rational num / 2^k. */
-function dyadic(x: number): { num: bigint; k: number } {
+export function dyadic(x: number): { num: bigint; k: number } {
   if (x === 0) return { num: 0n, k: 0 };
   const dv = new DataView(new ArrayBuffer(8));
   dv.setFloat64(0, x);

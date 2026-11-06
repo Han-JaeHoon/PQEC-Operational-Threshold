@@ -66,13 +66,38 @@ export function fbEnclosure(protocol: RegimeProtocol, q: number): Interval | nul
   return pb ? pb.F : null;
 }
 
-/** Sign of F_B(q) - F_0: 1 above, -1 below, 0 not certified. */
-function gainSign(protocol: RegimeProtocol, q: number, F0: Interval): number {
-  const F = fbEnclosure(protocol, q);
-  if (!F) return 0;
-  if (F[0] > F0[1]) return 1;
-  if (F[1] < F0[0]) return -1;
+/** Sign of F_B(q) - F for a certified enclosure of F: 1 above, -1 below, 0 not certified. */
+function crossingSign(protocol: RegimeProtocol, q: number, F: Interval): number {
+  const FB = fbEnclosure(protocol, q);
+  if (!FB) return 0;
+  if (FB[0] > F[1]) return 1;
+  if (FB[1] < F[0]) return -1;
   return 0;
+}
+
+/**
+ * Certified bracket lo < q_F < hi of the unique q_F in (0, q_ent) with F_B(q_F) = F, for every F in
+ * the enclosure `F` with 1/2 < F < 1, by bisection on the certified sign of F_B(q) - F.  Starts from
+ * [0, upper end of the q_ent isolating interval]: F_B(0) = 1 > F, and F_B < 1/2 < F at the upper
+ * end, which is checked.  It stops when the midpoint is a neighbour of an end point or its sign is
+ * not certified.  null if the upper end check fails.  Shared by q_gain (F = F_0) and q_target.
+ */
+export function fbCrossingBracket(
+  protocol: RegimeProtocol, F: Interval,
+): { lo: number; hi: number; steps: number } | null {
+  let lo = 0; // F_B(0) = 1 > F (Lemma 7.1)
+  let hi = 1 - Q_ENT[protocol].bracket[0]; // q_ent < hi < q_SN
+  let steps = 0;
+  if (!(F[1] < 1) || crossingSign(protocol, hi, F) !== -1) return null;
+  for (;;) {
+    const mid = lo + (hi - lo) / 2;
+    if (mid <= lo || mid >= hi) break;
+    const sg = crossingSign(protocol, mid, F);
+    steps++;
+    if (sg === 0) break; // F_B(mid) and F not separated: resolution limit
+    if (sg > 0) lo = mid; else hi = mid;
+  }
+  return { lo, hi, steps };
 }
 
 export interface QGainBracket {
@@ -97,21 +122,8 @@ export function qGainBracket(protocol: RegimeProtocol, eps: number): QGainBracke
   if (hit !== undefined) return hit;
   let out: QGainBracket | null = null;
   if (epsCoverage(eps) === "covered") {
-    const F0 = f0Enclosure(eps);
-    let lo = 0; // F_B(0) = 1 > F_0 (Lemma 7.1)
-    let hi = 1 - Q_ENT[protocol].bracket[0]; // q_ent < hi < q_SN
-    let steps = 0;
-    if (gainSign(protocol, hi, F0) === -1) {
-      for (;;) {
-        const mid = lo + (hi - lo) / 2;
-        if (mid <= lo || mid >= hi) break;
-        const sg = gainSign(protocol, mid, F0);
-        steps++;
-        if (sg === 0) break; // F_B(mid) and F_0 not separated: resolution limit
-        if (sg > 0) lo = mid; else hi = mid;
-      }
-      out = { protocol, eps, lo, hi, steps };
-    }
+    const b = fbCrossingBracket(protocol, f0Enclosure(eps));
+    if (b) out = { protocol, eps, ...b };
   }
   if (cache.size >= CACHE_MAX) cache.delete(cache.keys().next().value as string);
   cache.set(key, out);

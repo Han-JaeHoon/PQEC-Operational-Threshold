@@ -1,7 +1,7 @@
 # Type-3 / Type-4 / 4Q / BBPSSW interactive dynamics
 
 A local, browser-only simulator for the round-by-round dynamics of the **Type-3
-(textbook 16-CNOT)** and **Type-4 (resynthesized 14-CNOT)** noisy PQEC gadgets and of the
+(textbook 16-CNOT)** and **Type-4 (resynthesized 14-CNOT)** noisy entanglement-purification gadgets and of the
 **4Q (four-qubit, 5-CNOT, postselected)** noisy Bell-state distillation protocol, and of **Bennett's
 BBPSSW** recurrence purification. Pick the
 protocol at the top, move the input noise `ε` and the per-CNOT noise `q`, and the Bell
@@ -285,6 +285,93 @@ absolute route-2 term `128·2⁻¹⁰⁷⁴/(4D) + 2⁻¹⁰⁷⁴`. For very st
 I/4 so closely that u, v underflow below 1e-308; there the relative-error model alone does
 not bound route 2, so its bound also carries an absolute term of `65 · 2⁻¹⁰⁷⁴`. This changes
 no value, no sign and no chart, only that displayed bound in the underflow regime.
+
+## Asymptotic target fidelity: q_target(F_target)
+
+The **Target fidelity** slider and number box sit under the right end of the q slider (default
+`0.90`). The fuchsia line on the q slider, the `q_target(F_target)` entry of the threshold list, the
+dotted `F_target` line on the F_n chart and the "Asymptotic Target-Fidelity Threshold" panel show
+
+`q_target(F_target) = sup{q : F_∞(ε, q) ≥ F_target}`
+
+from the Nov 6 analytic note "Exact Algebraic Calculation of the Asymptotic Target-Fidelity Noise
+Threshold" (Theorems 1.1 and 5.1) and the note "The target-fidelity threshold q_target(F_target)"
+(Theorem 2). For `0 < ε < 2/3` and `1/2 < F_target < 1` it is the unique `q ∈ (0, q_ent)` with
+`F_B(q) = F_target`. It does **not** depend on `ε`, and the supremum is attained (`≥`). Equivalently
+`q_target(F) = q_gain(4(1 − F)/3)` (Eq. 59).
+
+**Algorithm** ([`src/qtarget.ts`](src/qtarget.ts)):
+
+- **Bracket.** The `q_gain` bisection, generalized as `fbCrossingBracket` in `src/qgain.ts`. It uses
+  the certified sign of `F_B(q) − F_target`, with `F_B` from the closed form of the Bell-connected
+  branch: the larger root `v_B` of `H_s` and the positive `u_B`. The saddle branch, negative `u`
+  and extraneous resultant roots are therefore never evaluated.
+- **Input.** `F_target` is the decimal typed. Its float64 value is within half an ulp of it, so
+  `[x − ulp, x + ulp]` is used as its enclosure, and the bracket holds for the decimal itself.
+- **Algebraic check.** The note's normalized polynomials are evaluated exactly in BigInt dyadic
+  arithmetic:
+  - `P_4` (Type 3) and `P_2` (Type 4), Eqs. 22-24, degrees 14 and 10 in `s`.
+  - `P_4Q`, Eqs. 33-34, degree 11 in `s`.
+
+  Each must change sign across the bracket in `s = 1 − q` at `λ = 4F − 1`. The panel shows the result.
+- **Verdict, `0 < ε < 2/3`.** `q ≤ lo`: Yes, with `F_∞ = F_B(q) > F_target`. `q ≥ hi`: No. In
+  between: **At/Near threshold**. A float `q` is never claimed to equal `q_target`; at `q = q_target`
+  the target is met.
+- **Verdict, separable input (`2/3 ≤ ε < 1`).**
+  - `q > q_target`: No, by the greatest-fixed-point argument (Theorem 2(c)).
+  - Below `q_target`: the attractor panel decides. `P_B` gives Yes, `Z(q)` gives No, and an undecided
+    basin gives "Not guaranteed for this input".
+- **Bennett–BBPSSW.** None of this applies: the panel, the line and the list entry are hidden.
+
+**`q_gain` versus `q_target`.**
+
+- The panel checks the order of the two certified brackets:
+  - `F_target > F_0 ⇒ q_target < q_gain`.
+  - `F_target < F_0 ⇒ q_target > q_gain`.
+- When `F_target` and `F_0` cannot be separated in float64, the line on the q slider is labelled
+  `q_target = q_gain` and drawn in both colours.
+- The success criteria stay separate: `q_gain` is about `F_∞ > F_0`, `q_target` about
+  `F_∞ ≥ F_target`. At `q = q_target = q_gain` the target is met but there is no strict gain.
+
+**Finite rounds.** The last row of the panel compares `F_n` at the inspected round `n` with
+`F_target` in float64. A dot on the F_n chart shows the same comparison: green means `F_n ≥ F_target`,
+red means below.
+
+This is not the asymptotic verdict. For `q > q_target`, a high-fidelity input can still have
+`F_n ≥ F_target` for some rounds. No finite-round threshold is computed.
+
+**Chart.**
+
+- In auto-zoom the `F_target` line never widens the y range. When it is off the axis, a short note at
+  that edge says so.
+- In `0–1` mode it is always drawn.
+
+**Performance.** One bracket takes about 0.06 ms and is cached per `(protocol, F_target)`. The
+computation is synchronous, so a fast slider never shows a stale value. Changing `ε`, `q`, `N` or `n`
+does not recompute it.
+
+**Precision.** Widths are below `1e-12` (typically `1e-14`).
+
+**Checks.**
+
+- **`tests/qtarget.test.ts`:**
+  - The eight-target table of the note agrees to 12 digits, including the `F_target = 0.90` values
+    0.042902284650 (Type 3), 0.054164752388 (Type 4) and 0.077335738856 (4Q).
+  - 39 independent arb values each lie in the bracket.
+  - The residual is below `1e-12`, and `F_B(lo) > F > F_B(hi)` is certified.
+  - The root is the physical branch, and the simulator's own map fixes `P_B` there.
+  - `0 < q_target < q_ent`, with the limits `q_ent` and `0`.
+  - `q_target` is strictly decreasing.
+  - The Taylor series agrees to third order.
+  - Eq. 59 and the order against `q_gain` hold.
+  - The normalized `N` equals the raw resultant of Eq. 19 exactly.
+  - The `s = 1` and `λ = 1` identities hold.
+  - The verdicts are correct, and the finite-round and asymptotic results stay separate.
+- **[`verification/verify_qtarget_polys.py`](verification/verify_qtarget_polys.py):** sympy checks of
+  Eqs. 21-41, 46, 51-52 and the slopes of Section 6.3.
+- **[`verification/generate_reference_qtarget.py`](verification/generate_reference_qtarget.py):**
+  256-bit arb, exact rational bisection to `1e-30`, and a Sturm count of `P_P(s, 4F−1)` on each final
+  interval. It writes `verification/reference_qtarget.json`.
 
 ## Controls
 

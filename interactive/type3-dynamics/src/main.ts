@@ -16,6 +16,9 @@ import { EpscClient, type WorkerLike } from "./epscClient";
 import { attractorReport } from "./attractor";
 import { gainReport } from "./gainPanel";
 import { qGainBracket } from "./qgain";
+import { qTargetBracket, targetCoverage } from "./qtarget";
+import { targetReport } from "./targetPanel";
+import type { Attractor } from "./attractor";
 
 const PLANE_UV = "u = ⟨XX⟩ = −⟨YY⟩, v = ⟨ZZ⟩, u₀ = v₀ = 1−ε";
 
@@ -27,18 +30,18 @@ const PROTOCOLS = {
   type3: {
     compute: computeTrajectory, qAbs, qRel,
     absDomain: "0 &lt; ε &lt; 2/3", relDomain: "0 &lt; ε &lt; 2/3",
-    title: "Type-3 noisy PQEC — round-by-round dynamics",
+    title: "Type-3 noisy entanglement purification — round-by-round dynamics",
     gadget: "Textbook 16-CNOT gadget",
     plane: PLANE_UV, coords: ["u", "v"],
-    docTitle: "Type-3 PQEC Dynamics",
+    docTitle: "Type-3 Entanglement Purification Dynamics",
   },
   type4: {
     compute: computeTrajectory4, qAbs: qAbs4, qRel: qRel4,
     absDomain: "0 &lt; ε &lt; 2/3", relDomain: "0 &lt; ε &lt; 2/3",
-    title: "Type-4 noisy PQEC — round-by-round dynamics",
+    title: "Type-4 noisy entanglement purification — round-by-round dynamics",
     gadget: "Resynthesized 14-CNOT gadget (pqec_resynth_noise.GATES)",
     plane: PLANE_UV, coords: ["u", "v"],
-    docTitle: "Type-4 PQEC Dynamics",
+    docTitle: "Type-4 Entanglement Purification Dynamics",
   },
   q4: {
     compute: computeTrajectory4Q, qAbs: qAbs4Q, qRel: qRel4Q,
@@ -78,6 +81,8 @@ const state = {
   qFull: false,
   fAxis: "auto" as "auto" | "fixed",
   dAxis: "lin" as "lin" | "asinh",
+  /** Asymptotic target fidelity: the last valid value (1/2 < F < 1); kept across every other input. */
+  Ft: 0.9,
 };
 const traj: Trajectory = allocTrajectory(MAX_N);
 /** Always MAX_N rounds, independent of the displayed N: feeds the monotonicity verdict. */
@@ -113,6 +118,13 @@ const attractorTbl = $<HTMLTableElement>("attractor");
 const gainPanel = $<HTMLDivElement>("gain-panel");
 const gainTbl = $<HTMLTableElement>("gain");
 const qMarkGain = $<HTMLSpanElement>("qmark-gain");
+const qMarkTarget = $<HTMLSpanElement>("qmark-target");
+const qTargetLine = $<HTMLElement>("q-target-line");
+const targetPanel = $<HTMLDivElement>("target-panel");
+const targetTbl = $<HTMLTableElement>("target");
+const tgtRange = $<HTMLInputElement>("tgt-range");
+const tgtNum = $<HTMLInputElement>("tgt-num");
+const tgtMsg = $<HTMLSpanElement>("tgt-msg");
 const monoBadge = $<HTMLSpanElement>("mono");
 const titleEl = $<HTMLHeadingElement>("title");
 const gadgetEl = $<HTMLSpanElement>("gadget");
@@ -223,6 +235,63 @@ function f0Line(u: uPlot) {
   ctx.font = `${11 * dpr}px -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif`;
   ctx.textAlign = "right";
   ctx.fillText(`F₀ = ${F0.toFixed(6)}`, u.bbox.left + u.bbox.width - 4 * dpr, y - 4 * dpr);
+  ctx.restore();
+}
+
+/** The q_target theorems apply to Type 3, Type 4 and 4Q only. */
+const hasTarget = () => state.proto !== "bbpssw";
+
+/**
+ * Dotted F_target reference, an overlay like F_0: it never widens the auto-zoomed y range.  When it
+ * is off the axis a short note at that edge says so.  The inspected round gets a dot coloured by
+ * F_n >= F_target (finite round, float64), which is not the asymptotic verdict.
+ */
+function targetLine(u: uPlot) {
+  if (!hasTarget()) return;
+  const Ft = state.Ft;
+  const ctx = u.ctx;
+  const dpr = devicePixelRatio;
+  const top = u.bbox.top, bot = u.bbox.top + u.bbox.height;
+  const left = u.bbox.left, right = u.bbox.left + u.bbox.width;
+  const y = u.valToPos(Ft, "y", true);
+  if (!Number.isFinite(y)) return;
+  const col = css("--c-qtarget");
+  ctx.save();
+  ctx.font = `${11 * dpr}px -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif`;
+  ctx.fillStyle = col;
+  ctx.textAlign = "left";
+  if (y < top - 1 || y > bot + 1) {
+    const above = y < top;
+    ctx.fillText(`F_target = ${Ft} ${above ? "↑" : "↓"} (축 범위 밖)`, left + 6 * dpr, above ? top + 12 * dpr : bot - 5 * dpr);
+    ctx.restore();
+    return;
+  }
+  ctx.strokeStyle = col;
+  ctx.lineWidth = 1.5 * dpr;
+  ctx.setLineDash([2 * dpr, 3 * dpr]);
+  ctx.beginPath();
+  ctx.moveTo(left, y);
+  ctx.lineTo(right, y);
+  ctx.stroke();
+  // name on the right like F_0, unless the F_0 name is there (then on the left)
+  const y0 = u.valToPos(traj.pPhiP[0], "y", true);
+  const clash = Math.abs(y - y0) < 14 * dpr;
+  ctx.textAlign = clash ? "left" : "right";
+  ctx.fillText(`F_target = ${Ft}`, clash ? left + 6 * dpr : right - 4 * dpr, y - 4 * dpr);
+  // the inspected round against the target (finite round)
+  const n = state.sel;
+  if (n <= traj.N) {
+    const x = u.valToPos(n, "x", true);
+    const Fn = traj.pPhiP[n];
+    const yn = u.valToPos(Fn, "y", true);
+    if (x >= left - 1 && x <= right + 1 && yn >= top - 1 && yn <= bot + 1) {
+      ctx.setLineDash([]);
+      ctx.fillStyle = css(Fn >= Ft ? "--c-inc" : "--c-dec");
+      ctx.beginPath();
+      ctx.arc(x, yn, 4.5 * dpr, 0, 2 * Math.PI);
+      ctx.fill();
+    }
+  }
   ctx.restore();
 }
 
@@ -341,7 +410,7 @@ function buildCharts() {
         value: (_u, v) => (v == null ? "–" : fmtF(v)),
       },
     ],
-    hooks: { draw: [f0Line, decMarker, selMarker], setSelect: [onSelect] },
+    hooks: { draw: [f0Line, targetLine, decMarker, selMarker], setSelect: [onSelect] },
   }, [[], []], elF);
 
   const pop = (label: string, c: string, dash?: number[]): uPlot.Series => ({
@@ -611,7 +680,7 @@ function renderAttractor() {
   const id = state.proto;
   const noTheorem = id === "bbpssw";
   attractorPanel.hidden = noTheorem;
-  if (noTheorem) { epsMark.hidden = true; return; }
+  if (noTheorem) { epsMark.hidden = true; lastAttractor = "out-of-range"; renderTarget(); return; }
   const { eps, q } = state;
   if (regimeReport(id, q).regime === "bistable") epsc.request(id, q);
   // A worker message can arrive between an input event and its frame: never reuse another orbit.
@@ -619,6 +688,7 @@ function renderAttractor() {
   // A transverse component that is exactly 0 in the charts cannot be the true limit below q_bi.
   const trapped = (id === "q4" ? trajLong.v[MAX_N + 1] : trajLong.u[MAX_N + 1]) === 0;
   const rep = attractorReport(id, PROTOCOLS[id].coords, q, eps, epsc.status(id, q), cached ?? orbitLimit(id, eps, q), trapped);
+  lastAttractor = rep.attractor;
   attractorTbl.innerHTML = rep.rows.map((r) => row(r.k, r.v, r.cls ?? "", r.txt ?? false)).join("");
   epsMark.hidden = !rep.bracket;
   if (rep.bracket) {
@@ -627,6 +697,48 @@ function renderAttractor() {
     const w = rep.bracket.hi - rep.bracket.lo;
     epsMark.title = `certified eps_c(q) in [${rep.bracket.lo}, ${rep.bracket.hi}], width ${w.toExponential(1)}`;
   }
+  renderTarget(); // its verdict for separable input reads the attractor
+}
+
+/** Attractor verdict of the last renderAttractor, for the target panel. */
+let lastAttractor: Attractor = "out-of-range";
+
+/**
+ * Asymptotic target fidelity: panel, q-slider line and the threshold-list entry.  q_target is
+ * synchronous and cached per (protocol, F_target), so eps, q, N and n changes never recompute it
+ * and a fast slider never shows a stale value.
+ */
+function renderTarget() {
+  const id = state.proto;
+  const none = id === "bbpssw";
+  targetPanel.hidden = none;
+  qTargetLine.hidden = none;
+  if (none) { qMarkTarget.hidden = true; return; }
+  const n = Math.min(state.sel, traj.N);
+  const rep = targetReport({
+    protocol: id, eps: state.eps, q: state.q, F: state.Ft,
+    attractor: lastAttractor, n, Fn: traj.pPhiP[n],
+  });
+  targetTbl.innerHTML = rep.rows.map((r) => row(r.k, r.v, r.cls ?? "", r.txt ?? false)).join("");
+  const qmax = +qRange.max;
+  const mid = rep.lo !== null && rep.hi !== null ? (rep.lo + rep.hi) / 2 : NaN;
+  const same = rep.relation === "equal";
+  qMarkTarget.hidden = !(mid <= qmax);
+  if (!qMarkTarget.hidden) {
+    qMarkTarget.style.setProperty("--f", String(mid / qmax));
+    qMarkTarget.classList.toggle("same-gain", same);
+    qMarkTarget.querySelector("i")!.innerHTML = same
+      ? "q<sub>target</sub> = q<sub>gain</sub>" : "q<sub>target</sub>";
+    qMarkTarget.title =
+      `q_target(F_target = ${state.Ft}) in [${rep.lo}, ${rep.hi}]\n` +
+      `sup{q : F_inf(eps, q) >= F_target} = F_B^-1(F_target), independent of eps (0 < eps < 2/3)` +
+      (same ? "\nF_target = F_0: the same threshold as q_gain(eps)" : "");
+  }
+  const b = qTargetBracket(id, state.Ft);
+  qTargetLine.innerHTML = b
+    ? `<b class="k-target">q<sub>target</sub>(F<sub>target</sub>)</b> = <span class="num">${((b.lo + b.hi) / 2).toFixed(6)}</span>` +
+      ` <span class="k-note">(F<sub>target</sub> = ${state.Ft}${same ? ", = q<sub>gain</sub>" : ""})</span>`
+    : `<b class="k-target">q<sub>target</sub></b>: <span class="st-unres">계산 실패</span>`;
 }
 
 /** Asymptotic fidelity gain: synchronous and cached per (protocol, eps), so never stale. */
@@ -706,6 +818,7 @@ function frame() {
       `(avg ${avg.toFixed(2)}, max ${mx.toFixed(2)} over last ${times.length})`;
   } else {
     renderInspector();
+    renderTarget();
     for (const u of [chartF, chartP, chartD]) u.redraw(false, false);
   }
 }
@@ -770,6 +883,30 @@ qNum.addEventListener("input", () => {
   schedule(true);
 });
 qNum.addEventListener("change", () => { qNum.value = fmtQ(state.q); });
+/**
+ * Target fidelity: the slider writes the number box; the number box keeps exactly what was typed
+ * (0.9999 stays 0.9999) and moves the slider, which only shows it within its own step.  Out of
+ * range input keeps the last valid F_target and says so.
+ */
+function setTarget(x: number, fromSlider: boolean) {
+  const cov = targetCoverage(x);
+  if (cov !== "valid") {
+    tgtMsg.textContent = cov === "not-a-number"
+      ? `숫자를 입력하세요 · 사용 중: ${state.Ft}`
+      : `0.5 < F_target < 1 범위 밖 · 사용 중: ${state.Ft}`;
+    tgtNum.setAttribute("aria-invalid", "true");
+    return;
+  }
+  tgtMsg.textContent = "";
+  tgtNum.removeAttribute("aria-invalid");
+  state.Ft = x;
+  if (fromSlider) tgtNum.value = String(x);
+  else tgtRange.value = String(x);
+  schedule(false);
+}
+tgtRange.addEventListener("input", () => setTarget(+tgtRange.value, true));
+tgtNum.addEventListener("input", () => setTarget(tgtNum.value.trim() === "" ? NaN : Number(tgtNum.value), false));
+
 qFull.addEventListener("change", () => {
   if (!qFull.checked && state.q > 0.2) { qFull.checked = true; return; }
   setQRange(qFull.checked);
@@ -828,6 +965,11 @@ matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => buil
 // a browser may restore the radio state on reload; follow it rather than the default
 const restored = document.querySelector<HTMLInputElement>('input[name="proto"]:checked');
 if (restored && restored.value !== state.proto) setProtocol(restored.value as ProtocolId);
+{ // likewise a restored target fidelity, if it is valid
+  const x = Number(tgtNum.value);
+  if (tgtNum.value.trim() !== "" && targetCoverage(x) === "valid") { state.Ft = x; tgtRange.value = String(x); }
+  else { tgtNum.value = String(state.Ft); tgtRange.value = String(state.Ft); }
+}
 PROTOCOLS[state.proto].compute(traj, state.eps, state.q, state.N);
 f0El.textContent = initialFidelity(state.eps).toFixed(6);
 renderMonotone();
