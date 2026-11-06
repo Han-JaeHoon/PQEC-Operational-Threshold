@@ -29,7 +29,6 @@
       </p>
     </div>
     <div class="controls">
-      <div class="controls-main">
       <div class="ctl ctl-eps">
         <label for="eps-num">Initial noise ε</label>
         <div id="eps-wrap" class="range-wrap">
@@ -41,9 +40,22 @@
         <input id="eps-num" type="number" min="0" max="1" step="0.001" value="0.1" />
         <p class="qth-line f0-line" title="F₀ = 1 − 3ε/4 for (1−ε)|Φ⁺⟩⟨Φ⁺| + ε I/4">Initial Fidelity: <span id="f0" class="num"></span></p>
       </div>
+      <div class="controls-side">
+        <div class="ctl">
+          <label for="n-num">Rounds N</label>
+          <input id="n-range" type="range" min="1" max="500" step="1" value="30" />
+          <input id="n-num" type="number" min="1" max="500" step="1" value="30" />
+        </div>
+        <div class="ctl">
+          <label for="sel-num" title="round shown in the Round inspector">Round n</label>
+          <input id="sel-range" type="range" min="0" max="30" step="1" value="30" />
+          <input id="sel-num" type="number" min="0" max="30" step="1" value="30" />
+          <p class="qth-line">Round inspector에 표시할 라운드 (기본값 N)</p>
+        </div>
+      </div>
       <div class="ctl ctl-q">
         <label for="q-num">CNOT noise q</label>
-        <div id="q-wrap" class="range-wrap">
+        <div id="q-wrap" class="range-wrap" title="bands: green = P_B global attractor (q < q_bi) · amber = bistable (q_bi < q < q_SN) · red = Z global attractor (q > q_SN)">
           <div class="qbands" aria-hidden="true">
             <span class="qband qband-pur"></span>
             <span class="qband qband-bist"></span>
@@ -60,27 +72,12 @@
         </div>
         <input id="q-num" type="number" min="0" max="1" step="0.0001" value="0.0327" />
         <label class="chk"><input id="q-full" type="checkbox" /> 0–1</label>
-        <ul class="qth-list">
-          <li id="q-thresholds" class="qth-line"></li>
-          <li id="q-gain-line" class="qth-line"></li>
-          <li id="q-const" class="qth-line"></li>
-          <li id="q-regime" class="qth-line regime"></li>
-        </ul>
       </div>
-      </div>
-      <div class="controls-side">
-        <div class="ctl">
-          <label for="n-num">Rounds N</label>
-          <input id="n-range" type="range" min="1" max="500" step="1" value="30" />
-          <input id="n-num" type="number" min="1" max="500" step="1" value="30" />
-        </div>
-        <div class="ctl">
-          <label for="sel-num" title="round shown in the Round inspector">Round n</label>
-          <input id="sel-range" type="range" min="0" max="30" step="1" value="30" />
-          <input id="sel-num" type="number" min="0" max="30" step="1" value="30" />
-          <p class="qth-line">Round inspector에 표시할 라운드 (기본값 N)</p>
-        </div>
-      </div>
+      <ul class="qth-list">
+        <li id="q-thresholds" class="qth-line"></li>
+        <li id="q-gain-line" class="qth-line"></li>
+        <li id="q-const" class="qth-line"></li>
+      </ul>
     </div>
   </header>
 
@@ -118,6 +115,10 @@
 
     <aside class="side">
       <div class="panel">
+        <div class="panel-head"><h2>Summary (rounds 0…N)</h2></div>
+        <table id="summary" class="kv"></table>
+      </div>
+      <div class="panel">
         <div class="panel-head"><h2>Round inspector</h2></div>
         <p class="hint">select n with the Round n slider at the top, or click a point in any chart · drag across a chart to zoom rounds (y re-fits) · double-click to reset</p>
         <table id="inspector" class="kv"></table>
@@ -131,10 +132,6 @@
         <div class="panel-head"><h2>Asymptotic Fidelity Gain Threshold</h2></div>
         <p class="hint">F<sub>∞</sub> &gt; F<sub>0</sub> 판정 (Nov 6 노트, Theorem 7.2). 라운드마다의 증가(q<sub>th</sub>)나 자원 기준과는 다릅니다. q 슬라이더의 초록 눈금이 q<sub>gain</sub>(ε)입니다.</p>
         <table id="gain" class="kv"></table>
-      </div>
-      <div class="panel">
-        <div class="panel-head"><h2>Summary (rounds 0…N)</h2></div>
-        <table id="summary" class="kv"></table>
       </div>
     </aside>
   </main>

@@ -80,13 +80,15 @@ h2 { font-size: 14px; margin: 0; font-weight: 600; }
   grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
   gap: 10px 32px;
 }
-.controls-main, .controls-side { display: grid; gap: 6px; align-content: start; min-width: 0; }
+/* row 1: eps | N, n.  row 2: q | the threshold values */
+.controls-side { display: grid; gap: 6px; align-content: start; min-width: 0; }
 /* same columns in both rows, so the eps and q sliders have the same length and start */
-.controls-main .ctl { grid-template-columns: 8.2em minmax(0, 1fr) 7.5em 3.6em; }
+/* two classes, so this wins over the generic .ctl columns below */
+.controls .ctl-eps, .controls .ctl-q { grid-template-columns: 8.2em minmax(0, 1fr) 7.5em 3.6em; align-content: start; }
 .controls-side .ctl { grid-template-columns: 5.5em minmax(0, 1fr) 6em; }
 .qth-list {
-  grid-column: 2 / -1;
-  margin: 0;
+  align-self: start;
+  margin: 10px 0 0;
   padding-left: 1.1em;
   display: grid;
   gap: 3px;
@@ -167,7 +169,7 @@ h2 { font-size: 14px; margin: 0; font-weight: 600; }
 /* subscripts must not change the height of a threshold line; two lines are always reserved */
 .qth-line :is(sub, sup) { line-height: 0; }
 #q-thresholds { min-height: calc(1.4em); }
-#q-regime { min-height: calc(2 * 1.4em + 6px); }
+
 /* protocol constants q_bi, q_SN: full-height lines over three tinted regime bands */
 .qbands {
   position: absolute;

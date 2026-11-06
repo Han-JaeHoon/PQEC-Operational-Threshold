@@ -10,10 +10,10 @@ import { qAbs4, qRel4 } from "./thresholds4";
 import { computeTrajectory4Q } from "./q4map";
 import { qAbs4Q, qRel4Q } from "./thresholds4q";
 import { bbpsswPSucc, computeTrajectoryBBPSSW } from "./bbpsswmap";
-import { LIMIT_MAX_ROUNDS, orbitLimit, regimeReport, THRESHOLDS, zPoint } from "./regimes";
+import { orbitLimit, regimeReport, THRESHOLDS } from "./regimes";
 import { initialFidelity } from "./epsc";
 import { EpscClient, type WorkerLike } from "./epscClient";
-import { attractorReport, zText } from "./attractor";
+import { attractorReport } from "./attractor";
 import { gainReport } from "./gainPanel";
 import { qGainBracket } from "./qgain";
 
@@ -106,7 +106,6 @@ const qThLine = $<HTMLElement>("q-thresholds");
 const qGainLine = $<HTMLElement>("q-gain-line");
 const qWrap = $<HTMLDivElement>("q-wrap");
 const qConstLine = $<HTMLElement>("q-const");
-const qRegimeLine = $<HTMLElement>("q-regime");
 const f0El = $<HTMLSpanElement>("f0");
 const epsMark = $<HTMLSpanElement>("epsmark");
 const attractorPanel = $<HTMLDivElement>("attractor-panel");
@@ -515,8 +514,7 @@ function renderGainLine() {
   if (id === "bbpssw") return;
   const b = qGainBracket(id, state.eps);
   qGainLine.innerHTML = b
-    ? `<b class="k-gain">q<sub>gain</sub>(ε)</b> = <span class="num">${((b.lo + b.hi) / 2).toFixed(6)}</span>` +
-      ` (asymptotic fidelity gain: F<sub>∞</sub> &gt; F<sub>0</sub> iff q &lt; q<sub>gain</sub>)`
+    ? `<b class="k-gain">q<sub>gain</sub>(ε)</b> = <span class="num">${((b.lo + b.hi) / 2).toFixed(6)}</span>`
     : `<b class="k-gain">q<sub>gain</sub></b>: 0 &lt; ε &lt; 2/3에서만 정의`;
 }
 
@@ -551,15 +549,12 @@ function renderThresholds() {
     // 4Q, 2/3 <= eps < 1: only q_rel has an analytic value there
     qThLine.innerHTML =
       `<b class="k-abs">q<sub>abs</sub></b>: defined only for ${p.absDomain} · ` +
-      `<b class="k-rel">q<sub>rel</sub>(ε)</b> = <span class="num">${r.toFixed(6)}</span> · ` +
-      `q is ${state.q < r ? "below" : "above"} q<sub>rel</sub>`;
+      `<b class="k-rel">q<sub>rel</sub>(ε)</b> = <span class="num">${r.toFixed(6)}</span>`;
     return;
   }
-  const where = state.q < a ? "below both" : state.q < r ? "between q<sub>abs</sub> and q<sub>rel</sub>" : "above both";
   qThLine.innerHTML =
     `<b class="k-abs">q<sub>abs</sub>(ε)</b> = <span class="num">${a.toFixed(6)}</span> · ` +
-    `<b class="k-rel">q<sub>rel</sub>(ε)</b> = <span class="num">${r.toFixed(6)}</span> · ` +
-    `q is ${where}`;
+    `<b class="k-rel">q<sub>rel</sub>(ε)</b> = <span class="num">${r.toFixed(6)}</span>`;
 }
 
 /** The float64 orbit limit of the current (protocol, eps, q), once renderRegime has computed it. */
@@ -574,66 +569,19 @@ function renderRegime() {
   const id = state.proto;
   const noConstants = id === "bbpssw";
   qWrap.classList.toggle("no-constants", noConstants);
-  qConstLine.hidden = qRegimeLine.hidden = noConstants;
+  qConstLine.hidden = noConstants;
   if (noConstants) return;
-  const p = PROTOCOLS[id];
   const { qBi, qSN } = THRESHOLDS[id];
   const qmax = +qRange.max;
   qWrap.style.setProperty("--f-bi", String(qBi.q / qmax));
   qWrap.style.setProperty("--f-sn", String(qSN.q / qmax));
   qConstLine.innerHTML =
     `<b class="k-bi">q<sub>bi</sub></b> = <span class="num">${qBi.q.toFixed(6)}</span> · ` +
-    `<b class="k-sn">q<sub>SN</sub></b> = <span class="num">${qSN.q.toFixed(6)}</span> (ε와 무관한 상수)` +
-    `<span class="swatch swatch-pur"></span>P<sub>B</sub> 전역 끌개` +
-    `<span class="swatch swatch-bist"></span>쌍안정` +
-    `<span class="swatch swatch-unp"></span>Z 전역 끌개`;
+    `<b class="k-sn">q<sub>SN</sub></b> = <span class="num">${qSN.q.toFixed(6)}</span> (ε와 무관한 상수)`;
 
+  // the float64 orbit limit, shown (labelled uncertified) in the attractor panel
   const { eps, q } = state;
-  const report = regimeReport(id, q);
-  const reg = report.regime;
-  const lim = orbitLimit(id, eps, q);
-  lastLimit = { id, eps, q, lim };
-  const F = (x: number) => `F = <span class="num">${x.toFixed(6)}</span>`;
-  const point = () => {
-    const [a, b] = id === "q4" ? [lim.line, lim.transverse] : [lim.transverse, lim.line];
-    return `(${p.coords[0]}, ${p.coords[1]}) = (<span class="num">${a.toFixed(6)}, ${b.toFixed(6)}</span>)`;
-  };
-  const rounds = `${lim.rounds.toLocaleString("en-US")} 라운드`;
-  const open = `<span class="st-unres">미수렴: ${LIMIT_MAX_ROUNDS.toLocaleString("en-US")} 라운드 도달, 현재 ${F(lim.F)}</span>`;
-
-  // Theorem statement in bold; the rest is one uncertified float64 orbit, labelled as such.
-  let head: string, detail: string;
-  const orbitText = lim.converged ? `float64 궤도(비인증): ${F(lim.F)}, ${point()}, ${rounds}` : `float64 궤도(비인증): ${open}`;
-  if (reg === "unique-purified") {
-    head = "q &lt; q<sub>bi</sub>: 모든 0 &lt; ε &lt; 1에서 P<sub>B</sub>로 수렴";
-    detail = orbitText;
-  } else if (reg === "bistable" || reg === "on-threshold") {
-    head = reg === "bistable" ? "q<sub>bi</sub> &lt; q &lt; q<sub>SN</sub>: 쌍안정, ε<sub>c</sub>(q)에서 갈림" : "q = threshold: 수렴 정리 적용 안 함";
-    detail = orbitText;
-  } else {
-    const Z = zPoint(id, q);
-    head = "q &gt; q<sub>SN</sub>: 모든 0 &lt; ε &lt; 1에서 Z(q)로 수렴";
-    detail = `Z(q) = ${zText(id, p.coords, q)}`;
-    if (!lim.converged) detail += ` · ${open}`;
-    else if (Math.abs(lim.F - Z.F) > 1e-6) {
-      detail += ` · <span class="st-unres">float64 궤도(비인증) ${F(lim.F)}, Z(q)와 다름</span>`;
-    } else detail += ` · float64 궤도(비인증) ${rounds}`;
-  }
-  if (!report.inRange) {
-    head = `q = ${q}: 정리 범위(0 &lt; q &lt; 1) 밖`;
-    detail = `float64 궤도(비인증) ${F(lim.F)}`;
-  } else if (!(eps > 0 && eps < 1)) {
-    detail = `<span class="st-unres">ε = ${eps}: 정리 범위(0 &lt; ε &lt; 1) 밖, float64 궤도(비인증) ${F(lim.F)}</span>`;
-  }
-  // A transverse component that is exactly 0 below q_bi cannot be the true limit.
-  const tr = id === "q4" ? trajLong.v[MAX_N + 1] : trajLong.u[MAX_N + 1];
-  const inDomain = eps > 0 && eps < 1;
-  const stuck = reg === "unique-purified" && inDomain && tr === 0;
-  if (stuck || (reg === "unique-purified" && inDomain && lim.belowFloat64)) {
-    detail += ` · <span class="st-unres">transverse 성분 float64 underflow: 극한은 log 추적 값${stuck ? ", 차트 궤도는 불변선에 갇힌 값" : ""}</span>`;
-  }
-  qRegimeLine.className = `qth-line regime ${{ "unique-purified": "pur", bistable: "bist", "on-threshold": "bist", "unique-unpurified": "unp" }[reg]}`;
-  qRegimeLine.innerHTML = `<b>${head}</b> ${detail}`;
+  lastLimit = { id, eps, q, lim: orbitLimit(id, eps, q) };
 }
 
 // ---------------------------------------------------------------- eps_c(q)
@@ -652,7 +600,9 @@ function renderAttractor() {
   if (regimeReport(id, q).regime === "bistable") epsc.request(id, q);
   // A worker message can arrive between an input event and its frame: never reuse another orbit.
   const cached = lastLimit && lastLimit.id === id && lastLimit.eps === eps && lastLimit.q === q ? lastLimit.lim : null;
-  const rep = attractorReport(id, PROTOCOLS[id].coords, q, eps, epsc.status(id, q), cached ?? orbitLimit(id, eps, q));
+  // A transverse component that is exactly 0 in the charts cannot be the true limit below q_bi.
+  const trapped = (id === "q4" ? trajLong.v[MAX_N + 1] : trajLong.u[MAX_N + 1]) === 0;
+  const rep = attractorReport(id, PROTOCOLS[id].coords, q, eps, epsc.status(id, q), cached ?? orbitLimit(id, eps, q), trapped);
   attractorTbl.innerHTML = rep.rows.map((r) => row(r.k, r.v, r.cls ?? "", r.txt ?? false)).join("");
   epsMark.hidden = !rep.bracket;
   if (rep.bracket) {

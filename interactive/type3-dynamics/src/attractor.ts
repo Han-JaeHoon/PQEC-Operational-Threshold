@@ -56,6 +56,8 @@ export function zText(protocol: RegimeProtocol, coords: readonly [string, string
 export function attractorReport(
   protocol: RegimeProtocol, coords: readonly [string, string], q: number, eps: number,
   status: EpscStatus, orbit: OrbitLimit,
+  /** The 500-round chart orbit has a transverse component that is exactly 0. */
+  chartTrapped = false,
 ): AttractorReport {
   const report = regimeReport(protocol, q);
   const { regime } = report;
@@ -179,6 +181,10 @@ export function attractorReport(
   } else {
     check = `F = ${orbitF}, ${orbit.rounds.toLocaleString("en-US")} 라운드`;
     add("F(orbit) − F<sub>0</sub>", num((orbit.F - F0).toExponential(3)) + " (비인증)");
+    // below q_bi the transverse component can leave the float64 range on the way
+    if (orbit.belowFloat64 || chartTrapped) {
+      check += ` <span class="st-unres">· transverse 성분 float64 underflow: 극한은 log 추적 값${chartTrapped ? ", 차트 궤도는 불변선에 갇힌 값" : ""}</span>`;
+    }
   }
   add("float64 orbit (비인증)", check, TWO);
   return { regime, report, attractor, bracket, rows };

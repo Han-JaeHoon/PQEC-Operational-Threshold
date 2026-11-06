@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { attractorReport, fmtOutward, zText } from "../src/attractor";
 import { computeEpsc } from "../src/epsc";
 import { EpscClient, type EpscReply, type WorkerLike } from "../src/epscClient";
-import { orbitLimit, THRESHOLDS, type RegimeProtocol } from "../src/regimes";
+import { iterateLogOrbit, orbitLimit, THRESHOLDS, type RegimeProtocol } from "../src/regimes";
 
 const COORDS: Record<RegimeProtocol, [string, string]> = { type3: ["u", "v"], type4: ["u", "v"], q4: ["a", "b"] };
 const PROTOS: RegimeProtocol[] = ["type3", "type4", "q4"];
@@ -79,6 +79,18 @@ describe("attractor panel", () => {
       ].map((r) => r.rows.length);
       expect(new Set(counts).size).toBe(1);
     }
+  });
+  it("below q_bi the float64 underflow warning appears in the orbit row", () => {
+    const q = THRESHOLDS.type3.qBi.q - 0.01;
+    // a transverse component of exp(-2000): exactly 0 as a plain float64 (as in regimes.test.ts)
+    const o = iterateLogOrbit("type3", 0.9, -2000, q);
+    expect(o.belowFloat64).toBe(true);
+    const r = attractorReport("type3", COORDS.type3, q, 0.5, { state: "pending", bracket: null }, o);
+    expect(r.rows.map((x) => x.v).join()).toContain("float64 underflow");
+    const plain = attractorReport("type3", COORDS.type3, 0.05, 0.5, { state: "pending", bracket: null }, orbitLimit("type3", 0.5, 0.05));
+    expect(plain.rows.map((x) => x.v).join()).not.toContain("float64 underflow");
+    const trapped = attractorReport("type3", COORDS.type3, 0.05, 0.5, { state: "pending", bracket: null }, orbitLimit("type3", 0.5, 0.05), true);
+    expect(trapped.rows.map((x) => x.v).join()).toContain("차트 궤도는 불변선에 갇힌 값");
   });
   it("names the line and transverse coordinate correctly in Z(q)", () => {
     const q = THRESHOLDS.type3.qBi.q - 0.01;
