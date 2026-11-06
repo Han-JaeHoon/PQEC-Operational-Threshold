@@ -63,6 +63,23 @@ describe("attractor panel", () => {
       }
     });
   }
+  it("keeps the same rows in the bistable window whatever the state, so the panel does not jump", () => {
+    for (const p of PROTOS) {
+      const t = THRESHOLDS[p];
+      const q = (t.qBi.q + t.qSN.q) / 2;
+      const b = computeEpsc(p, q)!;
+      const lim = orbitLimit(p, 0.5, q);
+      const counts = [
+        attractorReport(p, COORDS[p], q, 0.5, { state: "pending", bracket: null }, lim),
+        attractorReport(p, COORDS[p], q, 0.5, { state: "failed", bracket: null }, lim),
+        attractorReport(p, COORDS[p], q, 0.5, { state: "running", bracket: b }, lim),
+        attractorReport(p, COORDS[p], q, 0.5, { state: "final", bracket: b }, lim),
+        attractorReport(p, COORDS[p], q, 0.999, { state: "final", bracket: b }, orbitLimit(p, 0.999, q)),
+        attractorReport(p, COORDS[p], q, (b.lo + b.hi) / 2, { state: "final", bracket: b }, lim),
+      ].map((r) => r.rows.length);
+      expect(new Set(counts).size).toBe(1);
+    }
+  });
   it("names the line and transverse coordinate correctly in Z(q)", () => {
     const q = THRESHOLDS.type3.qBi.q - 0.01;
     expect(zText("type3", COORDS.type3, q)).toContain("v* =");

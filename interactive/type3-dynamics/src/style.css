@@ -176,6 +176,8 @@ h2 { font-size: 14px; margin: 0; font-weight: 600; }
 .ctl-eps { align-content: start; }
 .f0-line { text-align: right; }
 #attractor td { word-break: normal; }
+/* rows that usually wrap reserve two lines in every state, so the panel height stays put */
+#attractor tr.two-line td { height: calc(2 * 1.4em + 6px); }
 .swatch {
   display: inline-block;
   width: 10px;
@@ -225,7 +227,8 @@ h2 { font-size: 14px; margin: 0; font-weight: 600; }
   gap: 14px;
   padding: 14px 20px;
 }
-.charts { display: grid; gap: 14px; min-width: 0; }
+/* start: the chart panels keep their own height when the side column is taller */
+.charts { display: grid; gap: 14px; min-width: 0; align-content: start; }
 .side { display: grid; gap: 14px; align-content: start; }
 
 .panel {

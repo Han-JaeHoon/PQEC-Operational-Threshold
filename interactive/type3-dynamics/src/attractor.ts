@@ -90,11 +90,17 @@ export function attractorReport(
     return { regime, report, attractor, bracket, rows };
   }
 
+  // While a bracket is computed the same rows stay, with empty values, so the panel keeps its height.
+  const EMPTY = "—";
+  const TWO = "two-line";
   if (regime === "bistable") {
-    if (status.state === "failed") {
-      add("ε<sub>c</sub>(q)", `<span class="st-unres">계산 실패: 인증 구간 없음</span>`);
-    } else if (!status.bracket) {
-      add("ε<sub>c</sub>(q)", `<span class="st-unres">계산 중…</span>`);
+    if (!status.bracket) {
+      add("ε<sub>c</sub>(q)", status.state === "failed"
+        ? `<span class="st-unres">계산 실패: 인증 구간 없음</span>`
+        : `<span class="st-unres">계산 중…</span>`);
+      add("Certified interval", EMPTY, TWO);
+      add("Width", EMPTY);
+      add("F<sub>c</sub> = 1 − 3ε<sub>c</sub>/4", EMPTY, TWO);
     } else {
       bracket = status.bracket;
       const { lo, hi } = bracket;
@@ -102,12 +108,12 @@ export function attractorReport(
       const running = status.state === "running";
       const midD = Math.min(14, Math.max(3, Math.floor(-Math.log10(w))));
       add("ε<sub>c</sub>(q)", `≈ ${num(((lo + hi) / 2).toFixed(midD))}`);
-      add("Certified interval", num(intervalText(lo, hi)));
+      add("Certified interval", num(intervalText(lo, hi)), TWO);
       add("Width", `${num(w.toExponential(1))}` + (running
         ? ` <span class="st-unres">· 계산 중</span>`
         : isDetermined(bracket) ? ` · N = ${num(`${bracket.roundsLo}, ${bracket.roundsHi}`)}`
         : ` <span class="st-unres">· 계산 미완료: ${bracket.stop === "budget" ? "라운드 한도 도달" : "float64 ball 해상도 한계"}</span>`));
-      add("F<sub>c</sub> = 1 − 3ε<sub>c</sub>/4", num(intervalText(initialFidelity(hi), initialFidelity(lo))));
+      add("F<sub>c</sub> = 1 − 3ε<sub>c</sub>/4", num(intervalText(initialFidelity(hi), initialFidelity(lo))), TWO);
     }
   }
 
@@ -128,6 +134,7 @@ export function attractorReport(
     add("Global attractor", `${zName} (모든 0 &lt; ε &lt; 1)`);
   } else if (!bracket) {
     attractor = "pending";
+    add("Comparison", EMPTY);
     add("Predicted attractor", `<span class="st-unres">아직 판정 불가</span>`);
   } else {
     attractor = basinVerdict(bracket, eps);
@@ -140,13 +147,16 @@ export function attractorReport(
 
   // Values at the attractor: closed forms where the notes give them, else the labelled orbit.
   if (attractor === "Z") {
-    add("Z(q)", zText(protocol, coords, q));
+    add("Z(q)", zText(protocol, coords, q), TWO);
     add("F(Z) − F<sub>0</sub>", num((Z.F - F0).toExponential(3)));
   } else if (attractor === "P_B" && fp) {
     const [a, b] = protocol === "q4" ? [fp.PB.v, fp.PB.u] : [fp.PB.u, fp.PB.v];
     const mid = (x: readonly [number, number]) => ((x[0] + x[1]) / 2).toFixed(6);
-    add("P<sub>B</sub>(q)", `(${coords[0]}, ${coords[1]}) = (${num(mid(a))}, ${num(mid(b))}), F = ${num(FB.toFixed(6))}`);
+    add("P<sub>B</sub>(q)", `(${coords[0]}, ${coords[1]}) = (${num(mid(a))}, ${num(mid(b))}), F = ${num(FB.toFixed(6))}`, TWO);
     add("F(P<sub>B</sub>) − F<sub>0</sub>", num((FB - F0).toExponential(3)));
+  } else if (regime === "bistable") {
+    add("Attractor", EMPTY, TWO);
+    add("F(attractor) − F<sub>0</sub>", EMPTY);
   }
 
   // The uncertified orbit, only as a comparison, never as the verdict.
@@ -170,6 +180,6 @@ export function attractorReport(
     check = `F = ${orbitF}, ${orbit.rounds.toLocaleString("en-US")} 라운드`;
     add("F(orbit) − F<sub>0</sub>", num((orbit.F - F0).toExponential(3)) + " (비인증)");
   }
-  add("float64 orbit (비인증)", check);
+  add("float64 orbit (비인증)", check, TWO);
   return { regime, report, attractor, bracket, rows };
 }
