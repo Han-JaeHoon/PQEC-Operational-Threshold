@@ -121,7 +121,40 @@ h2 { font-size: 14px; margin: 0; font-weight: 600; }
 .qmark[hidden] { display: none; }
 .qmark-abs { background: var(--c-qabs); }
 .qmark-rel { background: var(--c-qrel); }
-.qmark-gain { background: var(--c-inc); height: 12px; bottom: -8px; }
+.qmark-gain { background: var(--c-inc); }
+/* eps-dependent thresholds: full-height lines like q_bi / q_SN, names below the slider.
+   q_abs, q_rel and q_gain are often only pixels apart, so each name has its own fixed row
+   (abs, rel, gain from the top) with a dotted leader up to its line.  All three rows are always
+   reserved, so the header height does not change. */
+.qmark-var { top: -5px; bottom: -5px; height: auto; --row: 0; }
+.qmark-rel { --row: 1; }
+.qmark-gain { --row: 2; }
+.qmark-var::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 0;
+  height: calc(var(--row) * 12px + 2px);
+  border-left: 1px dotted currentColor;
+}
+.qmark-var i {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-top: calc(var(--row) * 12px + 2px);
+  font: 500 10px/1.2 -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif;
+  white-space: nowrap;
+}
+.qmark-var sub { font-size: 8px; line-height: 0; }
+.qmark-abs { color: var(--c-qabs); }
+.qmark-rel { color: var(--c-qrel); }
+.qmark-gain { color: var(--c-inc); }
+#q-wrap { margin-bottom: 44px; }
+/* subscripts must not change the height of a threshold line; two lines are always reserved */
+.qth-line :is(sub, sup) { line-height: 0; }
+#q-thresholds { min-height: calc(2 * 1.4em); }
+#q-regime { min-height: calc(2 * 1.4em + 6px); }
 /* protocol constants q_bi, q_SN: full-height lines over three tinted regime bands */
 .qbands {
   position: absolute;
@@ -207,6 +240,7 @@ h2 { font-size: 14px; margin: 0; font-weight: 600; }
 .qth-line .k-rel { color: var(--c-qrel); }
 .qth-line .k-bi { color: var(--c-qbi); }
 .qth-line .k-sn { color: var(--c-qsn); }
+.qth-line .k-gain { color: var(--c-inc); }
 .qth-line .num { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
 
 /* quiet monotonicity verdict next to the F_n title */

@@ -15,6 +15,7 @@ import { initialFidelity } from "./epsc";
 import { EpscClient, type WorkerLike } from "./epscClient";
 import { attractorReport, zText } from "./attractor";
 import { gainReport } from "./gainPanel";
+import { qGainBracket } from "./qgain";
 
 const PLANE_UV = "u = ⟨XX⟩ = −⟨YY⟩, v = ⟨ZZ⟩, u₀ = v₀ = 1−ε";
 
@@ -505,6 +506,15 @@ function renderSummary() {
   }
 }
 
+/** q_gain(eps) clause of the threshold line (Nov 6 note); the panel has the full certificate. */
+function gainClause(): string {
+  if (state.proto === "bbpssw") return "";
+  const b = qGainBracket(state.proto, state.eps);
+  return b
+    ? ` · <b class="k-gain">q<sub>gain</sub>(ε)</b> = <span class="num">${((b.lo + b.hi) / 2).toFixed(6)}</span>`
+    : ` · <b class="k-gain">q<sub>gain</sub></b>: 0 &lt; ε &lt; 2/3에서만`;
+}
+
 /** Analytic q_abs / q_rel (calculation notes) as ticks on the q slider + one text line. */
 function renderThresholds() {
   if (state.proto === "bbpssw") {
@@ -512,6 +522,7 @@ function renderThresholds() {
     qThLine.textContent = "BBPSSW: threshold 미표시";
     return;
   }
+  const gain = gainClause();
   const p = PROTOCOLS[state.proto];
   const a = p.qAbs(state.eps);
   const r = p.qRel(state.eps);
@@ -528,6 +539,7 @@ function renderThresholds() {
         `defined only for entangled input, ${p.absDomain}`
       : `<b class="k-abs">q<sub>abs</sub></b> defined only for ${p.absDomain}, ` +
         `<b class="k-rel">q<sub>rel</sub></b> only for ${p.relDomain}`;
+    qThLine.innerHTML += gain;
     return;
   }
   if (!absOk) {
@@ -535,14 +547,14 @@ function renderThresholds() {
     qThLine.innerHTML =
       `<b class="k-abs">q<sub>abs</sub></b>: defined only for ${p.absDomain} · ` +
       `<b class="k-rel">q<sub>rel</sub>(ε)</b> = <span class="num">${r.toFixed(6)}</span> · ` +
-      `q is ${state.q < r ? "below" : "above"} q<sub>rel</sub>`;
+      `q is ${state.q < r ? "below" : "above"} q<sub>rel</sub>` + gain;
     return;
   }
   const where = state.q < a ? "below both" : state.q < r ? "between q<sub>abs</sub> and q<sub>rel</sub>" : "above both";
   qThLine.innerHTML =
     `<b class="k-abs">q<sub>abs</sub>(ε)</b> = <span class="num">${a.toFixed(6)}</span> · ` +
     `<b class="k-rel">q<sub>rel</sub>(ε)</b> = <span class="num">${r.toFixed(6)}</span> · ` +
-    `q is ${where}`;
+    `q is ${where}` + gain;
 }
 
 /** The float64 orbit limit of the current (protocol, eps, q), once renderRegime has computed it. */
