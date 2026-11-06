@@ -14,6 +14,7 @@ import { LIMIT_MAX_ROUNDS, orbitLimit, regimeReport, THRESHOLDS, zPoint } from "
 import { initialFidelity } from "./epsc";
 import { EpscClient, type WorkerLike } from "./epscClient";
 import { attractorReport, zText } from "./attractor";
+import { gainReport } from "./gainPanel";
 
 const PLANE_UV = "u = ⟨XX⟩ = −⟨YY⟩, v = ⟨ZZ⟩, u₀ = v₀ = 1−ε";
 
@@ -107,6 +108,9 @@ const f0El = $<HTMLSpanElement>("f0");
 const epsMark = $<HTMLSpanElement>("epsmark");
 const attractorPanel = $<HTMLDivElement>("attractor-panel");
 const attractorTbl = $<HTMLTableElement>("attractor");
+const gainPanel = $<HTMLDivElement>("gain-panel");
+const gainTbl = $<HTMLTableElement>("gain");
+const qMarkGain = $<HTMLSpanElement>("qmark-gain");
 const monoBadge = $<HTMLSpanElement>("mono");
 const titleEl = $<HTMLHeadingElement>("title");
 const gadgetEl = $<HTMLSpanElement>("gadget");
@@ -642,6 +646,23 @@ function renderAttractor() {
   }
 }
 
+/** Asymptotic fidelity gain: synchronous and cached per (protocol, eps), so never stale. */
+function renderGain() {
+  const id = state.proto;
+  const none = id === "bbpssw";
+  gainPanel.hidden = none;
+  if (none) { qMarkGain.hidden = true; return; }
+  const rep = gainReport(id, state.eps, state.q);
+  gainTbl.innerHTML = rep.rows.map((r) => row(r.k, r.v, r.cls ?? "", r.txt ?? false)).join("");
+  const qmax = +qRange.max;
+  const mid = rep.lo !== null && rep.hi !== null ? (rep.lo + rep.hi) / 2 : NaN;
+  qMarkGain.hidden = !(mid <= qmax);
+  if (!qMarkGain.hidden) {
+    qMarkGain.style.setProperty("--f", String(mid / qmax));
+    qMarkGain.title = `q_gain(ε) in [${rep.lo}, ${rep.hi}]`;
+  }
+}
+
 /** Monotonicity verdict for F_n over a fixed horizon of MAX_N rounds. */
 function renderMonotone() {
   PROTOCOLS[state.proto].compute(trajLong, state.eps, state.q, MAX_N);
@@ -686,6 +707,7 @@ function frame() {
     renderMonotone();
     renderRegime();
     renderAttractor();
+    renderGain();
     const t1 = performance.now();
     renderThresholds();
     pushData();
@@ -718,6 +740,7 @@ function setQRange(full: boolean) {
   renderThresholds();
   renderRegime();
   renderAttractor();
+  renderGain();
 }
 
 function setSelected(n: number) {
@@ -825,6 +848,7 @@ f0El.textContent = initialFidelity(state.eps).toFixed(6);
 renderMonotone();
 renderRegime();
 renderAttractor();
+renderGain();
 renderThresholds();
 buildCharts();
 renderSummary();

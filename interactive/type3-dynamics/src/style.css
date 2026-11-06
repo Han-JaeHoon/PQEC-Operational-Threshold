@@ -121,6 +121,7 @@ h2 { font-size: 14px; margin: 0; font-weight: 600; }
 .qmark[hidden] { display: none; }
 .qmark-abs { background: var(--c-qabs); }
 .qmark-rel { background: var(--c-qrel); }
+.qmark-gain { background: var(--c-inc); height: 12px; bottom: -8px; }
 /* protocol constants q_bi, q_SN: full-height lines over three tinted regime bands */
 .qbands {
   position: absolute;
@@ -175,9 +176,11 @@ h2 { font-size: 14px; margin: 0; font-weight: 600; }
 .emark sub { font-size: 8px; line-height: 0; }
 .ctl-eps { align-content: start; }
 .f0-line { text-align: right; }
-#attractor td { word-break: normal; }
+#attractor td, #gain td { word-break: normal; }
+/* sub/superscripts must not make one row taller than another */
+#attractor :is(sub, sup), #gain :is(sub, sup) { line-height: 0; }
 /* rows that usually wrap reserve two lines in every state, so the panel height stays put */
-#attractor tr.two-line td { height: calc(2 * 1.4em + 6px); }
+#attractor tr.two-line td, #gain tr.two-line td { height: calc(2 * 1.4em + 6px); line-height: 1.4; }
 .swatch {
   display: inline-block;
   width: 10px;

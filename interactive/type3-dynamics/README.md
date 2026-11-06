@@ -137,6 +137,63 @@ only). `verify_epsc_polys.py` checks the polynomials and the map identity exactl
 script needs python-flint and mpmath: it certifies the simulator's endpoints at 18 off-grid `q`, using
 a different certificate (Proposition 4 of the `ε_c` note) in 256-bit ball arithmetic.
 
+## Asymptotic fidelity gain: q_gain(ε)
+
+The "Asymptotic Fidelity Gain Threshold" panel and the green tick on the q slider show
+`q_gain(ε) = sup{q : F_∞(ε, q) > F_0(ε)}`, from the Nov 6 note "Exact Algebraic Determination of the
+Asymptotic Fidelity-Gain Threshold". This is gain of the limit over the input. It is not a gain in
+every round (`q_th`), and it is not a resource criterion. The repository had no earlier name for this
+threshold (no `q_fixed`), so it is called `q_gain = q_F`.
+
+**Result used.** Theorem 7.2: for `0 < ε < 2/3`, `q_gain(ε) = q_F(ε)`, the unique `q ∈ (0, q_ent)` with
+`F_B(q) = 1 − 3ε/4`. `F_B` is the fidelity of the Bell-connected fixed point `P_B`, and
+`F_B(q_ent) = 1/2`. Basin switching never comes first (Theorem 6.2), so `ε_c(q)` is not needed here.
+The `ε_c` panel is unchanged.
+
+**Algorithm** ([`src/qgain.ts`](src/qgain.ts)):
+
+- **`F_B(q)`.** Enclosed with outward rounding from the closed form, Eq. 12:
+  - `v_B` is the larger root of `H_s`, taken as the larger quadratic root, never a numerically chosen one.
+  - `u_B` is the positive square root.
+  - This is `bellFixedPoint` in `src/epsc.ts`.
+- **Bracket.** Bisection in `q` keeps only end points whose sign of `F_B(q) − F_0` is certified, so
+  `lo < q_gain < hi` holds rigorously.
+  - Start: `[0, 1 − s_ent,lo]`. `F_B(0) = 1 > F_0`, and `F_B < 1/2 < F_0` at the upper end, which is
+    checked.
+  - Stop: when the midpoint is a neighbour of an end point, or its sign is not certified.
+  - The upper start lies below `q_SN`, so `P_B` exists throughout.
+- **Verdict.** `q ≤ lo`: gain. `q ≥ hi`: no gain. In between: uncertain. Strict monotonicity of `F_B`
+  (Lemma 7.1) makes this exact. "No" is not "converges to Z": for `q_gain < q ≤ q_ent` the orbit still
+  converges to `P_B`, only with `F_B(q) < F_0`.
+- **`q_ent` and `ε`.**
+  - `q_ent` is the root of `R_P(s)` (Eqs. 22-24) in the note's isolating interval. The side of a float
+    `q` is decided by the exact polynomial sign.
+  - `0 < ε < 2/3` is decided exactly (`3ε < 2` in BigInt).
+  - `ε = 0` and `ε ≥ 2/3` show that the result does not cover them.
+  - Within `1e-9` of 2/3 the panel says which side `ε` is actually on.
+
+No recurrence is iterated and no table is used. One bracket takes 0.05 to 0.3 ms and is cached per
+`(protocol, ε)`. The computation is synchronous, so a result can never belong to an earlier `ε`, `q`
+or protocol. Widths over `ε = 0.005 … 0.665` are at most `9.4e-13` (Type 3), `6.7e-13` (Type 4) and
+`1.1e-11` (4Q).
+
+**Checks.** `tests/qgain.test.ts` covers the following:
+
+- `P_B` is fixed by the simulator's own one-round map, for `q < q_bi` and in the window.
+- The residual `|F_B − F_0|` at the bracket midpoint is below `1e-12`.
+- Each bracket contains a root of the exact resultant `R_P(s, ε)` of Eq. 18: a sign change in BigInt
+  rationals.
+- `q_gain` is strictly increasing in `ε`.
+- The limits are `0` and `q_ent`.
+- `q_ent` agrees with `RESEARCH_SUMMARY.md`.
+- Eq. 70 holds against the independent `ε_c` code: `ε_c(q) > 2/3` for `q_bi < q ≤ q_ent`.
+
+```bash
+python verification/verify_qgain_polys.py
+```
+
+This script checks Eqs. 14-18 and the note's Appendix A certificate exactly, with sympy.
+
 ## The model
 
 The input is `(1−ε)|Φ⁺⟩⟨Φ⁺| + ε I/4 = ¼[II + (1−ε)(XX − YY + ZZ)]`. After every CNOT of

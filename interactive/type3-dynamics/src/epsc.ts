@@ -166,6 +166,28 @@ function fixedPointAt(p: ReturnType<typeof commonForm>, v: Interval): FixedPoint
 }
 
 /**
+ * Rigorous enclosure of the Bell-connected fixed point P_B(q): the larger root v_B of H_s and the
+ * positive square root for u (Nov 6 note, Eq. 12).  The same branch runs over 0 < q < q_SN; the
+ * caller decides whether q is in that range.  null if the enclosure fails (discriminant or u^2 not
+ * certified positive, e.g. right at the saddle-node).
+ */
+export function bellFixedPoint(protocol: RegimeProtocol, q: number): FixedPoint | null {
+  const p = commonForm(protocol, q);
+  const h2 = add(mul(p.gamma, p.b), mul(p.eta, p.alpha));
+  const h1 = sub(mul(p.eta, sub(p.beta, p.delta)), mul(p.gamma, p.alpha));
+  const h0 = mul(p.gamma, sub([1, 1], p.beta));
+  const root = sqrt(sub(mul(h1, h1), scale(4, mul(h2, h0))));
+  if (!(root[0] > 0) || !(h2[0] > 0)) return null;
+  // (-h1 + root) / (2 h2); when h1 > 0 the two terms cancel, and then h0 < 0 and the equal form
+  // 2(-h0) / (h1 + root) is used instead
+  const vB = h1[0] > 0
+    ? div(scale(2, [-h0[1], -h0[0]]), add(h1, root))
+    : div(add([-h1[1], -h1[0]], root), scale(2, h2));
+  const PB = fixedPointAt(p, vB);
+  return [PB.u[0], PB.u[1], PB.F[0], PB.F[1]].every(Number.isFinite) && vB[0] > 0 ? PB : null;
+}
+
+/**
  * Rigorous enclosures of the saddle S and the sink P_B (Eqs. 16-22).  The caller is responsible
  * for q being inside the bistable window; null if the enclosures do not separate the two roots.
  */

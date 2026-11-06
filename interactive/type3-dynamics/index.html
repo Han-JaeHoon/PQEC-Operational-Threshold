@@ -52,6 +52,7 @@
           <div class="qmarks" aria-hidden="true">
             <span id="qmark-abs" class="qmark qmark-abs" title="q_abs(ε)"></span>
             <span id="qmark-rel" class="qmark qmark-rel" title="q_rel(ε)"></span>
+            <span id="qmark-gain" class="qmark qmark-gain" title="q_gain(ε)" hidden></span>
             <span class="qmark qmark-const qmark-bi"><i>q<sub>bi</sub></i></span>
             <span class="qmark qmark-const qmark-sn"><i>q<sub>SN</sub></i></span>
           </div>
@@ -107,6 +108,11 @@
         <div class="panel-head"><h2>Asymptotic attractor (n → ∞)</h2></div>
         <p class="hint">증명된 정리에 따른 판정으로, 차트의 라운드별 시뮬레이션과 별개입니다. 끌개가 정해져도 fidelity 증가나 purification 성공을 뜻하지는 않습니다.</p>
         <table id="attractor" class="kv"></table>
+      </div>
+      <div id="gain-panel" class="panel">
+        <div class="panel-head"><h2>Asymptotic Fidelity Gain Threshold</h2></div>
+        <p class="hint">F<sub>∞</sub> &gt; F<sub>0</sub> 판정 (Nov 6 노트, Theorem 7.2). 라운드마다의 증가(q<sub>th</sub>)나 자원 기준과는 다릅니다. q 슬라이더의 초록 눈금이 q<sub>gain</sub>(ε)입니다.</p>
+        <table id="gain" class="kv"></table>
       </div>
       <div class="panel">
         <div class="panel-head"><h2>Round inspector</h2></div>
