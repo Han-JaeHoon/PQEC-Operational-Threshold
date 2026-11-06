@@ -49,6 +49,13 @@ const num = (s: string) => `<span class="num">${s}</span>`;
 const unres = (s: string) => `<span class="st-unres">${s}</span>`;
 const EMPTY = "—";
 const TWO = "two-line";
+/** F_target with at least four decimals, more if the typed value has them (0.9 -> 0.9000). */
+export function fmtTarget(x: number): string {
+  const s = String(x);
+  const d = s.includes("e") ? 4 : (s.split(".")[1] ?? "").length;
+  return d > 4 ? s : x.toFixed(4);
+}
+
 const POLY: Record<RegimeProtocol, string> = { type3: "P<sub>4</sub>", type4: "P<sub>2</sub>", q4: "P<sub>4Q</sub>" };
 
 export function targetReport(inp: TargetInput): TargetReport {
@@ -61,7 +68,7 @@ export function targetReport(inp: TargetInput): TargetReport {
   const reg = regimeReport(protocol, q);
 
   // 1-6. the threshold itself (independent of eps and q)
-  add("Target fidelity F<sub>target</sub>", num(String(F)));
+  add("Target fidelity F<sub>target</sub>", num(fmtTarget(F)));
   if (b) {
     const w = b.hi - b.lo;
     const d = Math.min(15, Math.max(4, Math.ceil(-Math.log10(w)) + 1));

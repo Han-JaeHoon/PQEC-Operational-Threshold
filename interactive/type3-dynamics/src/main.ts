@@ -17,7 +17,7 @@ import { attractorReport } from "./attractor";
 import { gainReport } from "./gainPanel";
 import { qGainBracket } from "./qgain";
 import { qTargetBracket, targetCoverage } from "./qtarget";
-import { targetReport } from "./targetPanel";
+import { fmtTarget, targetReport } from "./targetPanel";
 import type { Attractor } from "./attractor";
 
 const PLANE_UV = "u = ⟨XX⟩ = −⟨YY⟩, v = ⟨ZZ⟩, u₀ = v₀ = 1−ε";
@@ -262,7 +262,7 @@ function targetLine(u: uPlot) {
   ctx.textAlign = "left";
   if (y < top - 1 || y > bot + 1) {
     const above = y < top;
-    ctx.fillText(`F_target = ${Ft} ${above ? "↑" : "↓"} (축 범위 밖)`, left + 6 * dpr, above ? top + 12 * dpr : bot - 5 * dpr);
+    ctx.fillText(`F_target = ${fmtTarget(Ft)} ${above ? "↑" : "↓"} (축 범위 밖)`, left + 6 * dpr, above ? top + 12 * dpr : bot - 5 * dpr);
     ctx.restore();
     return;
   }
@@ -277,7 +277,7 @@ function targetLine(u: uPlot) {
   const y0 = u.valToPos(traj.pPhiP[0], "y", true);
   const clash = Math.abs(y - y0) < 14 * dpr;
   ctx.textAlign = clash ? "left" : "right";
-  ctx.fillText(`F_target = ${Ft}`, clash ? left + 6 * dpr : right - 4 * dpr, y - 4 * dpr);
+  ctx.fillText(`F_target = ${fmtTarget(Ft)}`, clash ? left + 6 * dpr : right - 4 * dpr, y - 4 * dpr);
   // the inspected round against the target (finite round)
   const n = state.sel;
   if (n <= traj.N) {
@@ -730,14 +730,14 @@ function renderTarget() {
     qMarkTarget.querySelector("i")!.innerHTML = same
       ? "q<sub>target</sub> = q<sub>gain</sub>" : "q<sub>target</sub>";
     qMarkTarget.title =
-      `q_target(F_target = ${state.Ft}) in [${rep.lo}, ${rep.hi}]\n` +
+      `q_target(F_target = ${fmtTarget(state.Ft)}) in [${rep.lo}, ${rep.hi}]\n` +
       `sup{q : F_inf(eps, q) >= F_target} = F_B^-1(F_target), independent of eps (0 < eps < 2/3)` +
       (same ? "\nF_target = F_0: the same threshold as q_gain(eps)" : "");
   }
   const b = qTargetBracket(id, state.Ft);
   qTargetLine.innerHTML = b
     ? `<b class="k-target">q<sub>target</sub>(F<sub>target</sub>)</b> = <span class="num">${((b.lo + b.hi) / 2).toFixed(6)}</span>` +
-      ` <span class="k-note">(F<sub>target</sub> = ${state.Ft}${same ? ", = q<sub>gain</sub>" : ""})</span>`
+      ` <span class="k-note">(F<sub>target</sub> = ${fmtTarget(state.Ft)}${same ? ", = q<sub>gain</sub>" : ""})</span>`
     : `<b class="k-target">q<sub>target</sub></b>: <span class="st-unres">계산 실패</span>`;
 }
 
@@ -892,20 +892,25 @@ function setTarget(x: number, fromSlider: boolean) {
   const cov = targetCoverage(x);
   if (cov !== "valid") {
     tgtMsg.textContent = cov === "not-a-number"
-      ? `숫자를 입력하세요 · 사용 중: ${state.Ft}`
-      : `0.5 < F_target < 1 범위 밖 · 사용 중: ${state.Ft}`;
+      ? `숫자를 입력하세요 · 사용 중: ${fmtTarget(state.Ft)}`
+      : `0.5 < F_target < 1 범위 밖 · 사용 중: ${fmtTarget(state.Ft)}`;
     tgtNum.setAttribute("aria-invalid", "true");
     return;
   }
   tgtMsg.textContent = "";
   tgtNum.removeAttribute("aria-invalid");
   state.Ft = x;
-  if (fromSlider) tgtNum.value = String(x);
+  if (fromSlider) tgtNum.value = x.toFixed(4);
   else tgtRange.value = String(x);
   schedule(false);
 }
 tgtRange.addEventListener("input", () => setTarget(+tgtRange.value, true));
 tgtNum.addEventListener("input", () => setTarget(tgtNum.value.trim() === "" ? NaN : Number(tgtNum.value), false));
+// after a spin-button step or on commit, pad to four decimals (0.9 -> 0.9000); longer values stay as typed
+tgtNum.addEventListener("change", () => {
+  const x = Number(tgtNum.value);
+  if (tgtNum.value.trim() !== "" && targetCoverage(x) === "valid" && x === state.Ft) tgtNum.value = fmtTarget(x);
+});
 
 qFull.addEventListener("change", () => {
   if (!qFull.checked && state.q > 0.2) { qFull.checked = true; return; }
@@ -968,7 +973,7 @@ if (restored && restored.value !== state.proto) setProtocol(restored.value as Pr
 { // likewise a restored target fidelity, if it is valid
   const x = Number(tgtNum.value);
   if (tgtNum.value.trim() !== "" && targetCoverage(x) === "valid") { state.Ft = x; tgtRange.value = String(x); }
-  else { tgtNum.value = String(state.Ft); tgtRange.value = String(state.Ft); }
+  else { tgtNum.value = fmtTarget(state.Ft); tgtRange.value = String(state.Ft); }
 }
 PROTOCOLS[state.proto].compute(traj, state.eps, state.q, state.N);
 f0El.textContent = initialFidelity(state.eps).toFixed(6);
