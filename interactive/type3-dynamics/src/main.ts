@@ -10,7 +10,7 @@ import { qAbs4, qRel4 } from "./thresholds4";
 import { computeTrajectory4Q } from "./q4map";
 import { qAbs4Q, qRel4Q } from "./thresholds4q";
 import { bbpsswPSucc, computeTrajectoryBBPSSW } from "./bbpsswmap";
-import { orbitLimit, regimeReport, THRESHOLDS } from "./regimes";
+import { LIMIT_MAX_ROUNDS, orbitLimit, regimeReport, THRESHOLDS } from "./regimes";
 import { initialFidelity } from "./epsc";
 import { EpscClient, type WorkerLike } from "./epscClient";
 import { attractorReport } from "./attractor";
@@ -469,6 +469,21 @@ function renderInspector() {
       : "");
 }
 
+/**
+ * Rounds the separate float64 limit orbit (regimes.orbitLimit, up to LIMIT_MAX_ROUNDS) needed to meet
+ * its convergence test.  Independent of N, uncertified, and dependent on the tolerances of that test.
+ */
+function convergenceText(): string {
+  const id = state.proto;
+  if (id === "bbpssw") return "—";
+  const { eps, q } = state;
+  const lim = lastLimit && lastLimit.id === id && lastLimit.eps === eps && lastLimit.q === q
+    ? lastLimit.lim : orbitLimit(id, eps, q);
+  return lim.converged
+    ? `${lim.rounds.toLocaleString("en-US")} (F = ${lim.F.toFixed(6)})`
+    : `<span class="st-unres">미수렴 (&gt; ${LIMIT_MAX_ROUNDS.toLocaleString("en-US")})</span>`;
+}
+
 function renderSummary() {
   const s = summarize(traj);
   const N = traj.N;
@@ -484,6 +499,7 @@ function renderSummary() {
     row(`F<sub>N</sub> (N = ${N})`, fmtF(s.FN)) +
     row(`max F (n = ${s.maxFRound})`, fmtF(s.maxF)) +
     row(`min F (n = ${s.minFRound})`, fmtF(s.minF)) +
+    row("rounds to converge (float64, 비인증)", convergenceText(), "", true) +
     (state.proto === "bbpssw" ? row(`gain F<sub>${N}</sub> − F<sub>0</sub>`, fmtE(s.FN - s.F0)) : "") +
     row("first resolved decrease", dec, "sep", true) +
     row("unresolved sign", unres, "", true) +
